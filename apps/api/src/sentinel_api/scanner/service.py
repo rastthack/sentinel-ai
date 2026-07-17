@@ -3,6 +3,12 @@
 from pathlib import Path
 from uuid import uuid4
 
+from sentinel_api.scanner.analysis.authorization_checks import AuthorizationCheckAnalyzer
+from sentinel_api.scanner.analysis.bola_detector import BolaDetector
+from sentinel_api.scanner.analysis.findings import AuthorizationAnalyzer
+from sentinel_api.scanner.analysis.handler_context import HandlerContextExtractor
+from sentinel_api.scanner.analysis.missing_auth_detector import MissingAuthenticationDetector
+from sentinel_api.scanner.analysis.risk_scoring import RiskScorer
 from sentinel_api.scanner.discovery import (
     AuthenticationDiscoverer,
     ExpressRouteDiscoverer,
@@ -36,6 +42,7 @@ class ScanService:
         authentication_discoverer: AuthenticationDiscoverer,
         prisma_parser: PrismaSchemaParser,
         route_model_mapper: RouteModelMapper,
+        authorization_analyzer: AuthorizationAnalyzer,
     ) -> None:
         self.loader = loader
         self.indexer = indexer
@@ -44,6 +51,7 @@ class ScanService:
         self.authentication_discoverer = authentication_discoverer
         self.prisma_parser = prisma_parser
         self.route_model_mapper = route_model_mapper
+        self.authorization_analyzer = authorization_analyzer
 
     def scan(self, repository_path: str | Path) -> RepositoryScanResponse:
         """Return structured metadata for one allowed local repository."""
@@ -59,6 +67,14 @@ class ScanService:
             routes,
             express.handler_sources,
             data_model,
+        )
+        analysis = self.authorization_analyzer.analyze(
+            index,
+            express,
+            routes,
+            authentication,
+            data_model,
+            mappings,
         )
 
         frameworks = [item.name for item in technologies if item.category == "framework"]
@@ -90,6 +106,22 @@ class ScanService:
                 public_route_count=authentication.public_route_count,
                 prisma_model_count=len(data_model.models),
                 mapped_route_count=len({mapping.route_id for mapping in mappings}),
+                finding_count=len(analysis.findings),
+                critical_finding_count=sum(
+                    finding.severity == "critical" for finding in analysis.findings
+                ),
+                high_finding_count=sum(
+                    finding.severity == "high" for finding in analysis.findings
+                ),
+                medium_finding_count=sum(
+                    finding.severity == "medium" for finding in analysis.findings
+                ),
+                low_finding_count=sum(
+                    finding.severity == "low" for finding in analysis.findings
+                ),
+                informational_finding_count=sum(
+                    finding.severity == "informational" for finding in analysis.findings
+                ),
             ),
             languages=languages,
             technologies=technologies,
@@ -99,11 +131,15 @@ class ScanService:
             authentication=authentication,
             data_model=data_model,
             route_model_mappings=mappings,
+            analysis_summary=analysis.summary,
+            authorization_graphs=analysis.graphs,
+            findings=analysis.findings,
             warnings=[
                 *index.warnings,
                 *express.warnings,
                 *prisma_warnings,
                 *mapping_warnings,
+                *analysis.summary.analysis_warnings,
             ],
         )
 
@@ -121,4 +157,11 @@ def build_scan_service(
         authentication_discoverer=AuthenticationDiscoverer(),
         prisma_parser=PrismaSchemaParser(),
         route_model_mapper=RouteModelMapper(),
+        authorization_analyzer=AuthorizationAnalyzer(
+            context_extractor=HandlerContextExtractor(),
+            check_analyzer=AuthorizationCheckAnalyzer(),
+            bola_detector=BolaDetector(),
+            missing_auth_detector=MissingAuthenticationDetector(),
+            risk_scorer=RiskScorer(),
+        ),
     )

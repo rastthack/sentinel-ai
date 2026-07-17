@@ -27,6 +27,20 @@ type OwnershipCandidate = {
   candidate_type: string;
 };
 
+type Finding = {
+  finding_id: string;
+  rule_id: string;
+  severity: "informational" | "low" | "medium" | "high" | "critical";
+  confidence: number;
+  method: string;
+  path: string;
+  model: string | null;
+  description: string;
+  evidence: string[];
+  recommendation: string;
+  risk_score: number;
+};
+
 type ScanResponse = {
   repository: { name: string };
   summary: {
@@ -34,6 +48,12 @@ type ScanResponse = {
     protected_route_count: number;
     public_route_count: number;
     prisma_model_count: number;
+    finding_count: number;
+    critical_finding_count: number;
+    high_finding_count: number;
+    medium_finding_count: number;
+    low_finding_count: number;
+    informational_finding_count: number;
   };
   routes: Route[];
   data_model: {
@@ -41,6 +61,17 @@ type ScanResponse = {
     ownership_candidates: OwnershipCandidate[];
   };
   route_model_mappings: Mapping[];
+  analysis_summary: {
+    routes_analyzed: number;
+    routes_with_resource_identifiers: number;
+    routes_with_ownership_controls: number;
+    potential_bola_count: number;
+  };
+  authorization_graphs: Array<{
+    route_id: string;
+    decision: "potential_bola" | "controlled" | "not_applicable" | "inconclusive";
+  }>;
+  findings: Finding[];
 };
 
 type ScanState =
@@ -53,6 +84,13 @@ function authenticationLabel(value: Route["authentication_required"]): string {
   if (value === true) return "Protected";
   if (value === false) return "Public";
   return "Unknown";
+}
+
+function severityClasses(severity: Finding["severity"]): string {
+  if (severity === "critical") return "border-rose-300/30 bg-rose-300/10 text-rose-200";
+  if (severity === "high") return "border-orange-300/30 bg-orange-300/10 text-orange-200";
+  if (severity === "medium") return "border-amber-300/30 bg-amber-300/10 text-amber-200";
+  return "border-sky-300/30 bg-sky-300/10 text-sky-200";
 }
 
 export function ApplicationStructure() {
@@ -175,6 +213,81 @@ export function ApplicationStructure() {
                 </ul>
               </div>
             </div>
+
+            <section className="rounded-xl border border-white/[0.08] bg-[#0c141f] p-5 sm:p-6">
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
+                  <p className="font-mono text-xs uppercase tracking-[0.16em] text-orange-300">
+                    Authorization Analysis
+                  </p>
+                  <h3 className="mt-2 text-2xl font-semibold text-slate-100">
+                    Deterministic static findings
+                  </h3>
+                </div>
+                <div className="flex gap-4 font-mono text-xs text-slate-500">
+                  <span>{scan.summary.finding_count} findings</span>
+                  <span>
+                    C {scan.summary.critical_finding_count} · H {scan.summary.high_finding_count} · M {scan.summary.medium_finding_count} · L {scan.summary.low_finding_count}
+                  </span>
+                  <span>{scan.analysis_summary.routes_analyzed} routes analyzed</span>
+                  <span>
+                    {scan.authorization_graphs.filter((graph) => graph.decision === "controlled").length} controlled
+                  </span>
+                </div>
+              </div>
+
+              {scan.findings.length === 0 ? (
+                <p className="mt-6 rounded-lg border border-white/[0.06] p-4 text-sm text-slate-500">
+                  No authorization findings met the deterministic evidence threshold.
+                </p>
+              ) : (
+                <div className="mt-6 space-y-4">
+                  {scan.findings.map((finding) => (
+                    <article className="rounded-xl border border-white/[0.08] bg-slate-950/40 p-5" key={finding.finding_id}>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className={`rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] ${severityClasses(finding.severity)}`}>
+                          {finding.severity}
+                        </span>
+                        <span className="font-mono text-xs text-slate-400">{finding.finding_id}</span>
+                        <span className="font-mono text-xs text-slate-600">{finding.rule_id}</span>
+                      </div>
+                      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
+                        <div>
+                          <p className="font-mono text-sm text-slate-200">{finding.method} {finding.path}</p>
+                          <p className="mt-2 text-sm leading-6 text-slate-400">{finding.description}</p>
+                        </div>
+                        <dl className="grid grid-cols-3 gap-4 text-right font-mono text-xs">
+                          <div>
+                            <dt className="text-slate-600">Model</dt>
+                            <dd className="mt-1 text-slate-300">{finding.model ?? "—"}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-slate-600">Confidence</dt>
+                            <dd className="mt-1 text-slate-300">{Math.round(finding.confidence * 100)}%</dd>
+                          </div>
+                          <div>
+                            <dt className="text-slate-600">Risk</dt>
+                            <dd className="mt-1 text-slate-300">{finding.risk_score}/100</dd>
+                          </div>
+                        </dl>
+                      </div>
+                      <div className="mt-5 grid gap-5 border-t border-white/[0.06] pt-5 lg:grid-cols-2">
+                        <div>
+                          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600">Evidence</p>
+                          <ul className="mt-2 space-y-1.5 text-sm text-slate-400">
+                            {finding.evidence.map((item) => <li key={item}>· {item}</li>)}
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600">Recommendation</p>
+                          <p className="mt-2 text-sm leading-6 text-slate-400">{finding.recommendation}</p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         ) : null}
       </div>

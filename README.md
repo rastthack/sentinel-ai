@@ -4,11 +4,11 @@
 
 Sentinel AI is an evidence-driven security reviewer for AI-generated web applications. This repository contains the Next.js interface, FastAPI service, and a bundled controlled demo target.
 
-Milestone 4 adds safe, deterministic application-structure discovery. Sentinel now maps Express routes and middleware, classifies authentication from concrete source behavior, parses the focused Prisma schema surface, identifies ownership-field candidates, and associates direct Prisma operations with routes. Vulnerability detection, exploit reproduction, GPT integration, and patch generation are intentionally not implemented.
+Milestone 5 adds deterministic static authorization findings. Sentinel tracks client-controlled resource identifiers into direct Prisma selectors, recognizes concrete ownership, membership, role, and authorization-middleware controls, and reports potential BOLA/IDOR with explainable confidence and risk scoring. GPT-5.6 explanation, exploit reproduction, and patch generation are intentionally not implemented.
 
 ## Static repository scanner
 
-The FastAPI service can inventory an allowed local repository and detect languages, technologies, entrypoints, Express routes, authentication controls, Prisma models, ownership candidates, and direct route-to-model operations from static evidence:
+The FastAPI service inventories an allowed local repository, discovers its application structure, and performs conservative authorization analysis from static evidence:
 
 ```bash
 curl --fail http://127.0.0.1:8000/api/scans/demo
@@ -32,7 +32,7 @@ apps/api/.venv/bin/python -m sentinel_api.scanner.cli \
 
 ## Bundled vulnerable demo
 
-[TaskFlow AI](demo/vulnerable-taskflow/README.md) is a separate, realistic Express/TypeScript project-management SaaS application bundled under `demo/vulnerable-taskflow`. It intentionally contains exactly one documented BOLA vulnerability in `GET /api/projects/:id` for future, controlled Sentinel AI validation.
+[TaskFlow AI](demo/vulnerable-taskflow/README.md) is a separate, realistic Express/TypeScript project-management SaaS application bundled under `demo/vulnerable-taskflow`. It intentionally contains exactly one documented BOLA vulnerability in `GET /api/projects/:id`, which Sentinel now identifies through deterministic static analysis.
 
 TaskFlow AI is not Sentinel AI. It must remain localhost-only and must never be deployed to a public or production environment.
 
@@ -83,4 +83,4 @@ The root commands run checks for both applications. See [docs/development.md](do
 
 ## Security boundaries
 
-This foundation does not execute repository code or model-generated commands. Structure discovery does not make vulnerability claims. Future validation must target only localhost or allowlisted bundled demos, secrets must never be sent to a model, and generated patches must remain reviewable proposals applied to temporary copies. See [the scanner architecture](docs/scanner-architecture.md) for supported syntax and limitations.
+Sentinel AI currently produces deterministic static-analysis findings. It does not execute repository code, issue target HTTP requests, generate exploit payloads, call GPT/OpenAI, or create patches. Future dynamic validation must target only localhost or allowlisted bundled demos, secrets must never be sent to a model, and generated patches must remain reviewable proposals applied to temporary copies. See [the scanner architecture](docs/scanner-architecture.md) for decision rules and limitations.

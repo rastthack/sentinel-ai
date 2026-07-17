@@ -1,5 +1,13 @@
 # Codex collaboration record
 
+## 2026-07-18 — Milestone 5
+
+The human defined deterministic authorization analysis as the complete milestone and prohibited model calls, target execution, DAST, exploitation, patches, and repository modification. Codex extended the existing private handler-source flow rather than broadening scanner permissions or adding runtime behavior.
+
+The analysis separates extraction, control recognition, detection, scoring, finding construction, and graph generation. Strong BOLA evidence requires authenticated single-object access, explicit request-identifier flow into a direct Prisma selector, a mapped model with ownership metadata, and no query, post-fetch, membership, role, or middleware control. Incomplete abstractions and weak mappings are suppressed or warned, not promoted to high-confidence findings.
+
+Verification uses focused secure and insecure fixtures plus the unmodified TaskFlow source. The result is exactly one stable High finding for `GET /api/projects/:id`, with `Project.ownerId`, 98% confidence, and risk score 82. Backend and frontend checks, production build, CLI modes, and both localhost API scan routes passed. No TaskFlow process or dependency command ran, and no GPT output, patch, exploit payload, or dynamic result was added.
+
 ## 2026-07-18 — Milestone 4
 
 The human set a strict static-analysis boundary and selected route, authentication, Prisma, ownership-candidate, and route-model discovery as the complete milestone. Codex preserved the Milestone 3 loader/indexer boundary and added focused components under the scanner service rather than placing discovery logic in API handlers.

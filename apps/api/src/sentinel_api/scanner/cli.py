@@ -12,6 +12,8 @@ from sentinel_api.scanner.service import build_scan_service
 def _summary(response: RepositoryScanResponse) -> str:
     """Render a concise structure summary without source contents."""
     lines = [
+        "Sentinel AI Authorization Analysis",
+        "",
         f"Repository: {response.repository.name}",
         "Technology stack: " + ", ".join(item.name for item in response.technologies),
         (
@@ -40,6 +42,31 @@ def _summary(response: RepositoryScanResponse) -> str:
         f"  {mapping.route_id} -> {mapping.model}.{mapping.operation}"
         for mapping in response.route_model_mappings
     )
+    lines.extend(
+        [
+            f"Routes analyzed: {response.analysis_summary.routes_analyzed}",
+            f"Findings: {response.summary.finding_count}",
+            (
+                "Severity counts: "
+                f"critical={response.summary.critical_finding_count}, "
+                f"high={response.summary.high_finding_count}, "
+                f"medium={response.summary.medium_finding_count}, "
+                f"low={response.summary.low_finding_count}, "
+                f"informational={response.summary.informational_finding_count}"
+            ),
+        ]
+    )
+    for finding in response.findings:
+        lines.extend(
+            [
+                "",
+                f"{finding.severity.upper()} {finding.finding_id} {finding.rule_id}",
+                f"{finding.method} {finding.path}",
+                f"Model: {finding.model or 'unknown'}",
+                f"Confidence: {finding.confidence:.0%}",
+                f"Risk score: {finding.risk_score}",
+            ]
+        )
     return "\n".join(lines)
 
 

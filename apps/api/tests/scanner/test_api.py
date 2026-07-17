@@ -73,8 +73,32 @@ def test_bundled_taskflow_scan_succeeds() -> None:
     assert str(REPOSITORY_ROOT) not in serialized
     assert "INTENTIONALLY VULNERABLE" not in serialized
     assert all("content" not in file.model_dump() for file in response.files)
-    assert "findings" not in serialized.casefold()
-    assert "vulnerability" not in serialized.casefold()
+    assert response.summary.finding_count == 1
+    assert response.summary.high_finding_count == 1
+    assert response.analysis_summary.potential_bola_count == 1
+    assert len(response.findings) == 1
+    finding = response.findings[0]
+    assert finding.rule_id == "AUTH-BOLA"
+    assert finding.title == "Potential BOLA / IDOR"
+    assert finding.severity == "high"
+    assert finding.confidence >= 0.9
+    assert finding.path == "/api/projects/:id"
+    assert finding.model == "Project"
+    assert finding.operation == "read_one"
+    assert finding.ownership_candidate == "ownerId"
+    assert finding.risk_score == 82
+    assert not any(key in serialized.casefold() for key in ("gpt", "patch", "exploit"))
+
+
+def test_bundled_finding_identifier_is_stable() -> None:
+    service = build_scan_service(REPOSITORY_ROOT)
+
+    first = service.scan("demo/vulnerable-taskflow")
+    second = service.scan("demo/vulnerable-taskflow")
+
+    assert first.findings[0].finding_id == second.findings[0].finding_id
+    assert first.findings[0].finding_id.startswith("AUTH-BOLA-")
+    assert [finding.path for finding in first.findings] == ["/api/projects/:id"]
 
 
 def test_demo_api_response_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -86,6 +110,9 @@ def test_demo_api_response_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert response.status_code == 200
     assert payload["repository"]["relative_path"] == "demo/vulnerable-taskflow"
+    assert payload["analysis_summary"]["potential_bola_count"] == 1
+    assert payload["findings"][0]["rule_id"] == "AUTH-BOLA"
+    assert len(payload["authorization_graphs"]) == 7
     assert str(REPOSITORY_ROOT) not in serialized
     assert "INTENTIONALLY VULNERABLE" not in serialized
     assert not any("content" in file for file in payload["files"])

@@ -119,9 +119,17 @@ python -m sentinel_api.scanner.cli \
   ../../demo/vulnerable-taskflow --format summary
 ```
 
+Default JSON now includes `analysis_summary`, `authorization_graphs`, and `findings`. A focused view from `apps/api` is:
+
+```bash
+PYTHONPATH=src python -m sentinel_api.scanner.cli \
+  ../../demo/vulnerable-taskflow \
+  | jq '{summary, analysis_summary, findings, authorization_graphs}'
+```
+
 The scanner is static and read-only. It rejects traversal, filesystem root, files, missing paths, and paths outside the configured root. It does not follow symlinks, inspect environment files, keys, certificates, binaries, or databases, and it never returns file contents or absolute paths. Default budgets are 5,000 files, 1 MB per file, 10 MB total inspected text, and 20 directory levels; skipped files and reached limits are reported as metadata or warnings.
 
-Structure discovery is deterministic and does not start TaskFlow, install its dependencies, issue target HTTP requests, or make vulnerability findings. Express parsing covers common literal routes, router factories, mounts, and ordered middleware. Authentication classification requires source evidence. Prisma parsing intentionally supports the syntax used by the bundled demo rather than the complete Prisma grammar. Route-model mapping currently requires a direct `prisma.<delegate>.<operation>` call in an inline handler; it does not chase arbitrary service or repository call graphs.
+Authorization analysis is deterministic and does not start TaskFlow, install its dependencies, issue target HTTP requests, or modify the target. It requires direct route, parameter-flow, model, ownership, and missing-control evidence before emitting BOLA. Express parsing covers common literal routes, router factories, mounts, and ordered middleware. Authentication classification requires source evidence. Prisma parsing intentionally supports the bundled syntax rather than the complete Prisma grammar. Handler and route-model analysis currently requires inline direct Prisma calls; it does not chase arbitrary service or repository call graphs.
 
 See [scanner-architecture.md](scanner-architecture.md) for discovery rules, evidence policy, and known limitations.
 

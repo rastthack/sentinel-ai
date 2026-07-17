@@ -6,6 +6,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from sentinel_api.scanner.analysis.models import (
+    AnalysisSummary,
+    AuthorizationFinding,
+    AuthorizationGraph,
+)
 from sentinel_api.scanner.discovery.models import (
     AuthenticationDiscovery,
     DiscoveredRoute,
@@ -105,6 +110,12 @@ class ScanSummary(BaseModel):
     public_route_count: int = Field(ge=0)
     prisma_model_count: int = Field(ge=0)
     mapped_route_count: int = Field(ge=0)
+    finding_count: int = Field(ge=0)
+    critical_finding_count: int = Field(ge=0)
+    high_finding_count: int = Field(ge=0)
+    medium_finding_count: int = Field(ge=0)
+    low_finding_count: int = Field(ge=0)
+    informational_finding_count: int = Field(ge=0)
 
 
 class RepositoryScanResponse(BaseModel):
@@ -123,6 +134,9 @@ class RepositoryScanResponse(BaseModel):
     authentication: AuthenticationDiscovery
     data_model: PrismaDataModel
     route_model_mappings: list[RouteModelMapping]
+    analysis_summary: AnalysisSummary
+    authorization_graphs: list[AuthorizationGraph]
+    findings: list[AuthorizationFinding]
     warnings: list[str]
 
 

@@ -1,5 +1,30 @@
 # Development log
 
+## 2026-07-18 — Milestone 5: Deterministic authorization analysis and BOLA detection
+
+### Codex contribution
+
+- Added modular handler-context extraction, ownership/membership/role control analysis, BOLA and conservative missing-authentication detectors, explainable risk scoring, stable findings, and authorization graphs.
+- Extended the shared response, API, CLI summary, and existing frontend scan panel with authorization results and severity information.
+- Added secure query, post-fetch comparison, membership, authorization-middleware, role, weak-mapping, ordering, stable-ID, missing-authentication, and TaskFlow integration tests.
+- Documented decision rules, confidence, scoring, false-positive controls, response additions, and focused parser limitations.
+
+### Human decisions
+
+- Milestone 5 is deterministic static analysis only; no GPT/OpenAI call, patch, exploit, DAST, or target execution is authorized.
+- A BOLA finding requires explicit client-identifier flow, direct model access, ownership metadata, and absence of concrete authorization controls.
+- Authentication alone, user references used for unrelated work, 404 behavior, and suggestive middleware names are not authorization evidence.
+- The bundled expected result is exactly one High `AUTH-BOLA` finding for `GET /api/projects/:id`.
+
+### Tests run
+
+- Backend pytest — 46 tests passed.
+- Backend Ruff and strict mypy — passed for 38 Python source and test files.
+- Frontend Vitest — 4 tests passed; ESLint and strict TypeScript passed.
+- CLI JSON and summary modes — identified one stable `AUTH-BOLA-D1D193AD3E` finding with 98% confidence and risk score 82.
+- Frontend production build and localhost API validation — passed.
+- No command, dependency installation, script, migration, server, or HTTP request was run inside TaskFlow.
+
 ## 2026-07-18 — Milestone 4: Route, authentication, and Prisma model discovery
 
 ### Codex contribution
