@@ -1,4 +1,5 @@
 import { ApiStatus } from "@/components/api-status";
+import { ApplicationStructure } from "@/components/application-structure";
 
 const workflow = [
   {
@@ -62,6 +63,8 @@ export default function Home() {
           <ApiStatus />
         </div>
       </section>
+
+      <ApplicationStructure />
 
       <section className="border-y border-white/[0.07] bg-slate-950/40">
         <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10">

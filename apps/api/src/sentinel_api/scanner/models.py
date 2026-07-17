@@ -6,6 +6,13 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from sentinel_api.scanner.discovery.models import (
+    AuthenticationDiscovery,
+    DiscoveredRoute,
+    PrismaDataModel,
+    RouteModelMapping,
+)
+
 FileCategory = Literal[
     "source",
     "configuration",
@@ -93,6 +100,11 @@ class ScanSummary(BaseModel):
     source_file_count: int = Field(ge=0)
     configuration_file_count: int = Field(ge=0)
     ignored_file_count: int = Field(ge=0)
+    route_count: int = Field(ge=0)
+    protected_route_count: int = Field(ge=0)
+    public_route_count: int = Field(ge=0)
+    prisma_model_count: int = Field(ge=0)
+    mapped_route_count: int = Field(ge=0)
 
 
 class RepositoryScanResponse(BaseModel):
@@ -107,6 +119,10 @@ class RepositoryScanResponse(BaseModel):
     technologies: list[TechnologyDetection]
     entrypoints: list[EntrypointDetection]
     files: list[IndexedFile]
+    routes: list[DiscoveredRoute]
+    authentication: AuthenticationDiscovery
+    data_model: PrismaDataModel
+    route_model_mappings: list[RouteModelMapping]
     warnings: list[str]
 
 

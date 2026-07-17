@@ -4,11 +4,11 @@
 
 Sentinel AI is an evidence-driven security reviewer for AI-generated web applications. This repository contains the Next.js interface, FastAPI service, and a bundled controlled demo target.
 
-Milestone 3 adds safe, deterministic repository metadata scanning. Vulnerability detection, route discovery, authentication discovery, exploit reproduction, and patch generation are intentionally not implemented yet.
+Milestone 4 adds safe, deterministic application-structure discovery. Sentinel now maps Express routes and middleware, classifies authentication from concrete source behavior, parses the focused Prisma schema surface, identifies ownership-field candidates, and associates direct Prisma operations with routes. Vulnerability detection, exploit reproduction, GPT integration, and patch generation are intentionally not implemented.
 
 ## Static repository scanner
 
-The FastAPI service can inventory an allowed local repository and detect languages, frameworks, package managers, data layers, databases, and likely entrypoints from static evidence:
+The FastAPI service can inventory an allowed local repository and detect languages, technologies, entrypoints, Express routes, authentication controls, Prisma models, ownership candidates, and direct route-to-model operations from static evidence:
 
 ```bash
 curl --fail http://127.0.0.1:8000/api/scans/demo
@@ -25,6 +25,9 @@ Run the same service without the frontend or HTTP server:
 
 ```bash
 apps/api/.venv/bin/python -m sentinel_api.scanner.cli demo/vulnerable-taskflow
+
+apps/api/.venv/bin/python -m sentinel_api.scanner.cli \
+  demo/vulnerable-taskflow --format summary
 ```
 
 ## Bundled vulnerable demo
@@ -65,7 +68,7 @@ npm run dev:web
 npm run dev:api
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The status panel calls the Next.js `/api/health` route, which performs a server-side request to FastAPI at `API_URL`. This keeps backend configuration and any future credentials out of browser code.
+Open [http://localhost:3000](http://localhost:3000). The status and Application Structure Discovery panels use server-side Next.js proxy routes to reach FastAPI at `API_URL`. This keeps backend configuration and any future credentials out of browser code.
 
 ## Quality checks
 
@@ -80,4 +83,4 @@ The root commands run checks for both applications. See [docs/development.md](do
 
 ## Security boundaries
 
-This foundation does not execute repository code or model-generated commands. Future validation must target only localhost or allowlisted bundled demos, secrets must never be sent to a model, and generated patches must remain reviewable proposals applied to temporary copies.
+This foundation does not execute repository code or model-generated commands. Structure discovery does not make vulnerability claims. Future validation must target only localhost or allowlisted bundled demos, secrets must never be sent to a model, and generated patches must remain reviewable proposals applied to temporary copies. See [the scanner architecture](docs/scanner-architecture.md) for supported syntax and limitations.

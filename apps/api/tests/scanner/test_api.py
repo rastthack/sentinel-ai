@@ -36,12 +36,45 @@ def test_bundled_taskflow_scan_succeeds() -> None:
     assert response.summary.package_manager == "npm"
     assert "Prisma" in response.summary.orm
     assert "SQLite" in response.summary.databases
+    assert response.summary.route_count == 7
+    assert response.summary.protected_route_count == 5
+    assert response.summary.public_route_count == 2
+    assert {route.path for route in response.routes} == {
+        "/health",
+        "/api/login",
+        "/api/dashboard",
+        "/api/projects",
+        "/api/projects/:id",
+        "/api/tasks",
+        "/api/profile",
+    }
+    assert [mechanism.name for mechanism in response.authentication.mechanisms] == [
+        "bearer_token"
+    ]
+    assert {model.name for model in response.data_model.models} == {
+        "User",
+        "Project",
+        "ProjectMember",
+        "Task",
+    }
+    assert any(
+        candidate.model == "Project" and candidate.field == "ownerId"
+        for candidate in response.data_model.ownership_candidates
+    )
+    assert any(
+        mapping.route_id == "route:GET:/api/projects/:id"
+        and mapping.model == "Project"
+        and mapping.operation == "read_one"
+        for mapping in response.route_model_mappings
+    )
     assert {"src/app.ts", "src/server.ts"} <= {
         entrypoint.relative_path for entrypoint in response.entrypoints
     }
     assert str(REPOSITORY_ROOT) not in serialized
     assert "INTENTIONALLY VULNERABLE" not in serialized
     assert all("content" not in file.model_dump() for file in response.files)
+    assert "findings" not in serialized.casefold()
+    assert "vulnerability" not in serialized.casefold()
 
 
 def test_demo_api_response_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:

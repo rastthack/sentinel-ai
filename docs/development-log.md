@@ -1,5 +1,30 @@
 # Development log
 
+## 2026-07-18 — Milestone 4: Route, authentication, and Prisma model discovery
+
+### Codex contribution
+
+- Added focused Express route/mount parsing with normalized paths, ordered middleware propagation, stable route IDs, evidence, and warnings.
+- Added behavior-based authentication and middleware classification, focused Prisma schema parsing, ownership-field candidates, and direct Prisma route-model mappings.
+- Extended the shared scan response, API endpoints, JSON/summary CLI, and landing-page demonstration without adding findings or severity concepts.
+- Added synthetic unit coverage plus bundled TaskFlow integration assertions and architecture documentation.
+
+### Human decisions
+
+- Milestone 4 remains static, deterministic, and read-only; TaskFlow is source input and is never executed by the scanner.
+- Authentication and mapping claims require explicit source evidence; weak names and route nouns do not force conclusions.
+- Ownership fields are candidates only. Vulnerability detection, BOLA/IDOR identification, GPT integration, exploitation, patches, and Milestone 5 remain out of scope.
+- The real TaskFlow repository is the route source of truth, including `POST /api/login` and `GET /health`.
+
+### Tests run
+
+- Backend Ruff and strict mypy — passed for 27 Python source and test files.
+- Backend pytest — 27 tests passed, including route, authentication, Prisma, mapping, safety, API, and bundled-demo integration coverage.
+- Frontend ESLint and strict TypeScript — passed.
+- Frontend Vitest — 4 tests passed, including sanitized demo-scan proxy behavior.
+- Scanner CLI JSON and summary modes — successfully discovered 7 routes, 5 protected routes, 2 public routes, 4 Prisma models, Bearer authentication, ownership candidates, and route-model mappings.
+- No commands, dependency installation, HTTP requests, scripts, migrations, or builds were run inside TaskFlow.
+
 ## 2026-07-18 — Milestone 3: Repository loader, file indexer, and framework detector
 
 ### Codex contribution

@@ -31,7 +31,9 @@ Useful endpoints:
 
 - Web UI: `http://localhost:3000`
 - Frontend health proxy: `http://localhost:3000/api/health`
+- Frontend demo-scan proxy: `http://localhost:3000/api/scans/demo`
 - API health endpoint: `http://127.0.0.1:8000/health`
+- Bundled static scan: `http://127.0.0.1:8000/api/scans/demo`
 - Interactive API docs: `http://127.0.0.1:8000/docs`
 
 The web proxy uses `API_URL` on the server. FastAPI accepts direct browser requests only from origins listed in `CORS_ORIGINS`.
@@ -100,17 +102,28 @@ Run the shared service through the CLI from the repository root:
 
 ```bash
 apps/api/.venv/bin/python -m sentinel_api.scanner.cli demo/vulnerable-taskflow
+apps/api/.venv/bin/python -m sentinel_api.scanner.cli \
+  demo/vulnerable-taskflow --format summary
 ```
 
 Or from `apps/api`:
 
 ```bash
 .venv/bin/python -m sentinel_api.scanner.cli ../../demo/vulnerable-taskflow
+
+PYTHONPATH=src python -m sentinel_api.scanner.cli \
+  ../../demo/vulnerable-taskflow --format summary
+
+# Equivalent after installing the sentinel_api package in the environment:
+python -m sentinel_api.scanner.cli \
+  ../../demo/vulnerable-taskflow --format summary
 ```
 
 The scanner is static and read-only. It rejects traversal, filesystem root, files, missing paths, and paths outside the configured root. It does not follow symlinks, inspect environment files, keys, certificates, binaries, or databases, and it never returns file contents or absolute paths. Default budgets are 5,000 files, 1 MB per file, 10 MB total inspected text, and 20 directory levels; skipped files and reached limits are reported as metadata or warnings.
 
-Current limitations: detection supports only the explicitly documented languages and technologies, evidence is configuration/import based, package manifests must be valid UTF-8, and no routes, authentication behavior, or vulnerabilities are analyzed.
+Structure discovery is deterministic and does not start TaskFlow, install its dependencies, issue target HTTP requests, or make vulnerability findings. Express parsing covers common literal routes, router factories, mounts, and ordered middleware. Authentication classification requires source evidence. Prisma parsing intentionally supports the syntax used by the bundled demo rather than the complete Prisma grammar. Route-model mapping currently requires a direct `prisma.<delegate>.<operation>` call in an inline handler; it does not chase arbitrary service or repository call graphs.
+
+See [scanner-architecture.md](scanner-architecture.md) for discovery rules, evidence policy, and known limitations.
 
 Scanner-focused checks:
 

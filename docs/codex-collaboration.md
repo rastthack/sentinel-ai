@@ -1,5 +1,13 @@
 # Codex collaboration record
 
+## 2026-07-18 — Milestone 4
+
+The human set a strict static-analysis boundary and selected route, authentication, Prisma, ownership-candidate, and route-model discovery as the complete milestone. Codex preserved the Milestone 3 loader/indexer boundary and added focused components under the scanner service rather than placing discovery logic in API handlers.
+
+The implementation uses balanced lexical extraction for common Express patterns, a router mount graph for path and middleware propagation, behavior-based authentication evidence, a focused Prisma parser, and direct delegate-call mapping. Unresolved custom middleware remains unknown, route nouns alone do not create model mappings, and ownership names never become vulnerability conclusions.
+
+Verification covered Ruff, strict mypy, 27 backend tests, frontend lint/type checking, 4 frontend tests, production frontend build, both CLI formats, and both FastAPI scan routes. The TaskFlow repository was only read as indexed source: no target command, dependency lifecycle, server, migration, HTTP request, exploit, model call, or patch workflow was used.
+
 ## 2026-07-18 — Milestone 3
 
 The human defined a static-only repository metadata milestone and explicitly prohibited execution, dependency installation, vulnerability analysis, route discovery, authentication discovery, and model integration. Codex implemented those boundaries as separate loader, indexer, detector, service, API, and CLI components inside the existing FastAPI package.

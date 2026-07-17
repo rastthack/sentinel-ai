@@ -3,6 +3,12 @@
 from pathlib import Path
 from uuid import uuid4
 
+from sentinel_api.scanner.discovery import (
+    AuthenticationDiscoverer,
+    ExpressRouteDiscoverer,
+    PrismaSchemaParser,
+    RouteModelMapper,
+)
 from sentinel_api.scanner.file_indexer import FileIndexer
 from sentinel_api.scanner.framework_detector import (
     FrameworkDetector,
@@ -26,10 +32,18 @@ class ScanService:
         loader: RepositoryLoader,
         indexer: FileIndexer,
         detector: FrameworkDetector,
+        route_discoverer: ExpressRouteDiscoverer,
+        authentication_discoverer: AuthenticationDiscoverer,
+        prisma_parser: PrismaSchemaParser,
+        route_model_mapper: RouteModelMapper,
     ) -> None:
         self.loader = loader
         self.indexer = indexer
         self.detector = detector
+        self.route_discoverer = route_discoverer
+        self.authentication_discoverer = authentication_discoverer
+        self.prisma_parser = prisma_parser
+        self.route_model_mapper = route_model_mapper
 
     def scan(self, repository_path: str | Path) -> RepositoryScanResponse:
         """Return structured metadata for one allowed local repository."""
@@ -38,6 +52,14 @@ class ScanService:
         languages = detect_languages(index.files)
         technologies = self.detector.detect(index)
         entrypoints = detect_entrypoints(index)
+        express = self.route_discoverer.discover(index)
+        routes, authentication = self.authentication_discoverer.discover(index, express)
+        data_model, prisma_warnings = self.prisma_parser.parse(index)
+        mappings, mapping_warnings = self.route_model_mapper.map(
+            routes,
+            express.handler_sources,
+            data_model,
+        )
 
         frameworks = [item.name for item in technologies if item.category == "framework"]
         package_managers = [
@@ -63,12 +85,26 @@ class ScanService:
                 source_file_count=source_count,
                 configuration_file_count=configuration_count,
                 ignored_file_count=index.ignored_file_count,
+                route_count=len(routes),
+                protected_route_count=authentication.protected_route_count,
+                public_route_count=authentication.public_route_count,
+                prisma_model_count=len(data_model.models),
+                mapped_route_count=len({mapping.route_id for mapping in mappings}),
             ),
             languages=languages,
             technologies=technologies,
             entrypoints=entrypoints,
             files=index.files,
-            warnings=index.warnings,
+            routes=routes,
+            authentication=authentication,
+            data_model=data_model,
+            route_model_mappings=mappings,
+            warnings=[
+                *index.warnings,
+                *express.warnings,
+                *prisma_warnings,
+                *mapping_warnings,
+            ],
         )
 
 
@@ -81,4 +117,8 @@ def build_scan_service(
         loader=RepositoryLoader(allowed_root or configured_scan_root()),
         indexer=FileIndexer(limits),
         detector=FrameworkDetector(),
+        route_discoverer=ExpressRouteDiscoverer(),
+        authentication_discoverer=AuthenticationDiscoverer(),
+        prisma_parser=PrismaSchemaParser(),
+        route_model_mapper=RouteModelMapper(),
     )
