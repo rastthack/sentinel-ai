@@ -1,0 +1,89 @@
+"""Scanner API and bundled demo integration tests."""
+
+import asyncio
+import json
+from pathlib import Path
+from typing import Any
+
+import httpx
+import pytest
+
+from sentinel_api.main import app
+from sentinel_api.scanner.service import build_scan_service
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
+
+
+async def api_request(
+    method: str,
+    path: str,
+    json_body: dict[str, Any] | None = None,
+) -> httpx.Response:
+    """Call the FastAPI app without opening a network port."""
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        return await client.request(method, path, json=json_body)
+
+
+def test_bundled_taskflow_scan_succeeds() -> None:
+    response = build_scan_service(REPOSITORY_ROOT).scan("demo/vulnerable-taskflow")
+    serialized = response.model_dump_json()
+
+    assert response.repository.name == "vulnerable-taskflow"
+    assert response.repository.relative_path == "demo/vulnerable-taskflow"
+    assert response.summary.primary_language == "TypeScript"
+    assert "Express" in response.summary.frameworks
+    assert response.summary.package_manager == "npm"
+    assert "Prisma" in response.summary.orm
+    assert "SQLite" in response.summary.databases
+    assert {"src/app.ts", "src/server.ts"} <= {
+        entrypoint.relative_path for entrypoint in response.entrypoints
+    }
+    assert str(REPOSITORY_ROOT) not in serialized
+    assert "INTENTIONALLY VULNERABLE" not in serialized
+    assert all("content" not in file.model_dump() for file in response.files)
+
+
+def test_demo_api_response_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SENTINEL_SCAN_ROOT", str(REPOSITORY_ROOT))
+
+    response = asyncio.run(api_request("GET", "/api/scans/demo"))
+    payload = response.json()
+    serialized = json.dumps(payload)
+
+    assert response.status_code == 200
+    assert payload["repository"]["relative_path"] == "demo/vulnerable-taskflow"
+    assert str(REPOSITORY_ROOT) not in serialized
+    assert "INTENTIONALLY VULNERABLE" not in serialized
+    assert not any("content" in file for file in payload["files"])
+
+
+def test_repository_post_scans_bundled_demo(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SENTINEL_SCAN_ROOT", str(REPOSITORY_ROOT))
+
+    response = asyncio.run(
+        api_request(
+            "POST",
+            "/api/scans/repository",
+            {"repository_path": "demo/vulnerable-taskflow"},
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.json()["summary"]["frameworks"] == ["Express"]
+
+
+def test_repository_api_rejects_path_traversal(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SENTINEL_SCAN_ROOT", str(REPOSITORY_ROOT))
+
+    response = asyncio.run(
+        api_request(
+            "POST",
+            "/api/scans/repository",
+            {"repository_path": "demo/../demo/vulnerable-taskflow"},
+        )
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "unsafe_repository_path"
+    assert str(REPOSITORY_ROOT) not in response.text

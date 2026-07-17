@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 
 from sentinel_api.config import cors_origins
+from sentinel_api.scanner.routes import router as scanner_router
 
 APP_VERSION = "0.1.0"
 
@@ -30,9 +31,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins(),
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["Accept", "Content-Type"],
 )
+app.include_router(scanner_router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["system"])

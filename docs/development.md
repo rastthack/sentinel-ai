@@ -76,3 +76,46 @@ npm run dev
 ```
 
 The demo listens only on `127.0.0.1:4000` by default. It is intentionally vulnerable and must not be exposed publicly. See its [dedicated README](../demo/vulnerable-taskflow/README.md) for credentials, API examples, Docker setup, and the exact vulnerability boundary.
+
+## Static repository scanner
+
+`SENTINEL_SCAN_ROOT` defines the only directory tree the backend may inspect. Leave it empty for the source-layout default—the Sentinel repository root—or set it to an explicit absolute path:
+
+```bash
+SENTINEL_SCAN_ROOT=/absolute/path/to/sentinel-ai npm run dev:api
+```
+
+Scan the bundled demo over HTTP:
+
+```bash
+curl --fail http://127.0.0.1:8000/api/scans/demo
+
+curl --fail \
+  --header 'Content-Type: application/json' \
+  --data '{"repository_path":"demo/vulnerable-taskflow"}' \
+  http://127.0.0.1:8000/api/scans/repository
+```
+
+Run the shared service through the CLI from the repository root:
+
+```bash
+apps/api/.venv/bin/python -m sentinel_api.scanner.cli demo/vulnerable-taskflow
+```
+
+Or from `apps/api`:
+
+```bash
+.venv/bin/python -m sentinel_api.scanner.cli ../../demo/vulnerable-taskflow
+```
+
+The scanner is static and read-only. It rejects traversal, filesystem root, files, missing paths, and paths outside the configured root. It does not follow symlinks, inspect environment files, keys, certificates, binaries, or databases, and it never returns file contents or absolute paths. Default budgets are 5,000 files, 1 MB per file, 10 MB total inspected text, and 20 directory levels; skipped files and reached limits are reported as metadata or warnings.
+
+Current limitations: detection supports only the explicitly documented languages and technologies, evidence is configuration/import based, package manifests must be valid UTF-8, and no routes, authentication behavior, or vulnerabilities are analyzed.
+
+Scanner-focused checks:
+
+```bash
+apps/api/.venv/bin/pytest apps/api/tests/scanner
+apps/api/.venv/bin/ruff check apps/api
+apps/api/.venv/bin/mypy apps/api/src apps/api/tests
+```

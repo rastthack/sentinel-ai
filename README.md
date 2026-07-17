@@ -4,7 +4,28 @@
 
 Sentinel AI is an evidence-driven security reviewer for AI-generated web applications. This repository contains the Next.js interface, FastAPI service, and a bundled controlled demo target.
 
-Repository scanning, vulnerability reproduction, and patch generation are intentionally not implemented yet.
+Milestone 3 adds safe, deterministic repository metadata scanning. Vulnerability detection, route discovery, authentication discovery, exploit reproduction, and patch generation are intentionally not implemented yet.
+
+## Static repository scanner
+
+The FastAPI service can inventory an allowed local repository and detect languages, frameworks, package managers, data layers, databases, and likely entrypoints from static evidence:
+
+```bash
+curl --fail http://127.0.0.1:8000/api/scans/demo
+
+curl --fail \
+  --header 'Content-Type: application/json' \
+  --data '{"repository_path":"demo/vulnerable-taskflow"}' \
+  http://127.0.0.1:8000/api/scans/repository
+```
+
+The scanner never executes repository code, installs target dependencies, returns file contents, or exposes absolute server paths. `SENTINEL_SCAN_ROOT` bounds every requested path; when unset, local development is limited to this Sentinel repository.
+
+Run the same service without the frontend or HTTP server:
+
+```bash
+apps/api/.venv/bin/python -m sentinel_api.scanner.cli demo/vulnerable-taskflow
+```
 
 ## Bundled vulnerable demo
 

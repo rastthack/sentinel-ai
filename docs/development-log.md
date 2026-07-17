@@ -1,5 +1,32 @@
 # Development log
 
+## 2026-07-18 — Milestone 3: Repository loader, file indexer, and framework detector
+
+### Codex contribution
+
+- Added a modular FastAPI scanner package with typed repository loading, bounded file indexing, language detection, technology evidence, entrypoint selection, shared orchestration, routes, and CLI.
+- Added `POST /api/scans/repository` and `GET /api/scans/demo` using the same service layer.
+- Added temporary-repository unit tests and integration coverage against the bundled TaskFlow AI repository.
+- Documented scan-root configuration, API and CLI usage, safety limits, and current detection boundaries.
+
+### Human decisions
+
+- Milestone 3 is deterministic and static-only; scanned repositories are never executed or modified.
+- `SENTINEL_SCAN_ROOT` is the hard filesystem boundary, with the Sentinel repository as the safe local default.
+- Public responses contain relative paths, metadata, and evidence but never source contents or absolute server paths.
+- Vulnerability, route, and authentication discovery plus GPT/OpenAI integration remain explicitly out of scope.
+- The existing frontend remains unchanged; API and CLI output are the developer-facing demonstration for this milestone.
+
+### Tests run
+
+- Backend Ruff — passed.
+- Strict backend mypy — passed for 17 source files.
+- Backend pytest — 19 tests passed, including temporary-repository safety cases and both scan endpoints against the bundled demo.
+- Scanner CLI — successfully scanned `demo/vulnerable-taskflow` and detected TypeScript, Express, npm, Prisma, SQLite, and both expected entrypoints.
+- Existing frontend ESLint and strict TypeScript — passed.
+- Existing frontend Vitest — 2 tests passed.
+- No commands, dependency installation, builds, scripts, or migrations were run inside the scanned TaskFlow repository during this milestone.
+
 ## 2026-07-18 — Milestone 2: TaskFlow AI vulnerable demo
 
 ### Codex contribution
