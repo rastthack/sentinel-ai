@@ -1,0 +1,19 @@
+{
+  "name": "sentinel-ai",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @sentinel/web",
+    "dev:api": "apps/api/.venv/bin/uvicorn sentinel_api.main:app --reload --app-dir apps/api/src",
+    "lint": "npm run lint --workspace @sentinel/web && apps/api/.venv/bin/ruff check apps/api",
+    "typecheck": "npm run typecheck --workspace @sentinel/web && apps/api/.venv/bin/mypy apps/api/src apps/api/tests",
+    "test": "npm run test --workspace @sentinel/web && apps/api/.venv/bin/pytest apps/api",
+    "build": "npm run build --workspace @sentinel/web"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

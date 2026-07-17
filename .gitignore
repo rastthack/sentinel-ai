@@ -1,0 +1,28 @@
+# JavaScript
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+htmlcov/
+
+# Environment and local tooling
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
+
+# Generated Sentinel workspaces and reports
+.sentinel/
+artifacts/

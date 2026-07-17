@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --background: #07101a;
+  --foreground: #e8eef5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 75% 12%, rgba(52, 211, 153, 0.08), transparent 25rem),
+    radial-gradient(circle at 10% 38%, rgba(45, 212, 191, 0.04), transparent 20rem),
+    var(--background);
+  color: var(--foreground);
+  font-family: Manrope, Avenir Next, Avenir, ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-mono {
+  font-family: IBM Plex Mono, SFMono-Regular, Consolas, Liberation Mono, monospace;
+}
+
+.noise {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.16;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: rgba(110, 231, 183, 0.25);
+  color: #ffffff;
+}
