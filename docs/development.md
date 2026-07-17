@@ -104,6 +104,10 @@ Run the shared service through the CLI from the repository root:
 apps/api/.venv/bin/python -m sentinel_api.scanner.cli demo/vulnerable-taskflow
 apps/api/.venv/bin/python -m sentinel_api.scanner.cli \
   demo/vulnerable-taskflow --format summary
+
+# This remains offline unless the server-side key and opt-in flag are set.
+apps/api/.venv/bin/python -m sentinel_api.scanner.cli \
+  demo/vulnerable-taskflow --explain --format summary
 ```
 
 Or from `apps/api`:
@@ -130,6 +134,10 @@ PYTHONPATH=src python -m sentinel_api.scanner.cli \
 The scanner is static and read-only. It rejects traversal, filesystem root, files, missing paths, and paths outside the configured root. It does not follow symlinks, inspect environment files, keys, certificates, binaries, or databases, and it never returns file contents or absolute paths. Default budgets are 5,000 files, 1 MB per file, 10 MB total inspected text, and 20 directory levels; skipped files and reached limits are reported as metadata or warnings.
 
 Authorization analysis is deterministic and does not start TaskFlow, install its dependencies, issue target HTTP requests, or modify the target. It requires direct route, parameter-flow, model, ownership, and missing-control evidence before emitting BOLA. Express parsing covers common literal routes, router factories, mounts, and ordered middleware. Authentication classification requires source evidence. Prisma parsing intentionally supports the bundled syntax rather than the complete Prisma grammar. Handler and route-model analysis currently requires inline direct Prisma calls; it does not chase arbitrary service or repository call graphs.
+
+## Optional AI explanations
+
+AI explanation is off by default. Set `SENTINEL_AI_ENABLED=true` and provide `OPENAI_API_KEY` only in the server environment to opt in; `OPENAI_MODEL` defaults to `gpt-5.6-sol`. Do not use `NEXT_PUBLIC_` for either setting. `SENTINEL_AI_CACHE_PATH` can select an application-owned cache path, but must never reference a scanned repository. The response includes an `ai` status (`disabled`, `complete`, `partial`, or `unavailable`) and leaves deterministic findings unchanged. Generated patches are review-required proposals only.
 
 See [scanner-architecture.md](scanner-architecture.md) for discovery rules, evidence policy, and known limitations.
 

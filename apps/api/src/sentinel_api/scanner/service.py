@@ -3,6 +3,16 @@
 from pathlib import Path
 from uuid import uuid4
 
+from sentinel_api.config import _default_cache_path, ai_settings
+from sentinel_api.scanner.ai.cache import (
+    ExplanationCache,
+    FileExplanationCache,
+)
+from sentinel_api.scanner.ai.client import (
+    AIExplanationEngine,
+    AIProvider,
+    OpenAIProvider,
+)
 from sentinel_api.scanner.analysis.authorization_checks import AuthorizationCheckAnalyzer
 from sentinel_api.scanner.analysis.bola_detector import BolaDetector
 from sentinel_api.scanner.analysis.findings import AuthorizationAnalyzer
@@ -43,6 +53,8 @@ class ScanService:
         prisma_parser: PrismaSchemaParser,
         route_model_mapper: RouteModelMapper,
         authorization_analyzer: AuthorizationAnalyzer,
+        ai_engine: AIExplanationEngine,
+        ai_enabled: bool,
     ) -> None:
         self.loader = loader
         self.indexer = indexer
@@ -52,8 +64,15 @@ class ScanService:
         self.prisma_parser = prisma_parser
         self.route_model_mapper = route_model_mapper
         self.authorization_analyzer = authorization_analyzer
+        self.ai_engine = ai_engine
+        self.ai_enabled = ai_enabled
 
-    def scan(self, repository_path: str | Path) -> RepositoryScanResponse:
+    def scan(
+        self,
+        repository_path: str | Path,
+        *,
+        explain: bool | None = None,
+    ) -> RepositoryScanResponse:
         """Return structured metadata for one allowed local repository."""
         repository = self.loader.load(repository_path)
         index = self.indexer.index(repository)
@@ -75,6 +94,12 @@ class ScanService:
             authentication,
             data_model,
             mappings,
+        )
+        ai = self.ai_engine.explain(
+            analysis.findings,
+            routes,
+            analysis.graphs,
+            enabled=self.ai_enabled if explain is None else explain,
         )
 
         frameworks = [item.name for item in technologies if item.category == "framework"]
@@ -134,6 +159,7 @@ class ScanService:
             analysis_summary=analysis.summary,
             authorization_graphs=analysis.graphs,
             findings=analysis.findings,
+            ai=ai,
             warnings=[
                 *index.warnings,
                 *express.warnings,
@@ -147,10 +173,26 @@ class ScanService:
 def build_scan_service(
     allowed_root: Path | None = None,
     limits: IndexLimits | None = None,
+    ai_provider: AIProvider | None = None,
+    ai_cache: ExplanationCache | None = None,
+    ai_enabled: bool | None = None,
 ) -> ScanService:
     """Construct a scanner with explicit or environment-backed configuration."""
+    scan_root = allowed_root or configured_scan_root()
+    settings = ai_settings()
+    provider = ai_provider
+    if provider is None and settings.api_key is not None:
+        provider = OpenAIProvider(
+            api_key=settings.api_key,
+            model=settings.model,
+            timeout_seconds=settings.timeout_seconds,
+            max_retries=settings.max_retries,
+        )
+    cache = ai_cache or FileExplanationCache(settings.cache_path)
+    if isinstance(cache, FileExplanationCache) and _is_within(cache.path, scan_root):
+        cache = FileExplanationCache(_default_cache_path())
     return ScanService(
-        loader=RepositoryLoader(allowed_root or configured_scan_root()),
+        loader=RepositoryLoader(scan_root),
         indexer=FileIndexer(limits),
         detector=FrameworkDetector(),
         route_discoverer=ExpressRouteDiscoverer(),
@@ -164,4 +206,19 @@ def build_scan_service(
             missing_auth_detector=MissingAuthenticationDetector(),
             risk_scorer=RiskScorer(),
         ),
+        ai_engine=AIExplanationEngine(
+            provider=provider,
+            cache=cache,
+            configured_model=provider.model if provider else settings.model,
+        ),
+        ai_enabled=settings.enabled if ai_enabled is None else ai_enabled,
     )
+
+
+def _is_within(candidate: Path, parent: Path) -> bool:
+    """Return whether a resolved cache location is inside the allowed scan tree."""
+    try:
+        candidate.expanduser().resolve().relative_to(parent.expanduser().resolve())
+    except ValueError:
+        return False
+    return True

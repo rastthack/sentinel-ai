@@ -4,7 +4,7 @@
 
 Sentinel AI is an evidence-driven security reviewer for AI-generated web applications. This repository contains the Next.js interface, FastAPI service, and a bundled controlled demo target.
 
-Milestone 5 adds deterministic static authorization findings. Sentinel tracks client-controlled resource identifiers into direct Prisma selectors, recognizes concrete ownership, membership, role, and authorization-middleware controls, and reports potential BOLA/IDOR with explainable confidence and risk scoring. GPT-5.6 explanation, exploit reproduction, and patch generation are intentionally not implemented.
+Milestone 6 keeps deterministic static authorization findings as the source of truth and adds an opt-in, structured GPT-5.6 Sol explanation layer. It can explain an existing finding and propose a minimal review-required diff; it never creates findings, executes targets, applies patches, or performs exploit reproduction.
 
 ## Static repository scanner
 
@@ -28,6 +28,10 @@ apps/api/.venv/bin/python -m sentinel_api.scanner.cli demo/vulnerable-taskflow
 
 apps/api/.venv/bin/python -m sentinel_api.scanner.cli \
   demo/vulnerable-taskflow --format summary
+
+# Opt in to an explanation only when OPENAI_API_KEY is configured server-side.
+apps/api/.venv/bin/python -m sentinel_api.scanner.cli \
+  demo/vulnerable-taskflow --explain --format summary
 ```
 
 ## Bundled vulnerable demo
@@ -83,4 +87,4 @@ The root commands run checks for both applications. See [docs/development.md](do
 
 ## Security boundaries
 
-Sentinel AI currently produces deterministic static-analysis findings. It does not execute repository code, issue target HTTP requests, generate exploit payloads, call GPT/OpenAI, or create patches. Future dynamic validation must target only localhost or allowlisted bundled demos, secrets must never be sent to a model, and generated patches must remain reviewable proposals applied to temporary copies. See [the scanner architecture](docs/scanner-architecture.md) for decision rules and limitations.
+The optional AI layer is disabled by default (`SENTINEL_AI_ENABLED=false`). When enabled, `OPENAI_API_KEY` remains server-side and the configured model defaults to `gpt-5.6-sol`; no `.env` files, credentials, absolute paths, or source contents are included in its prompt. Responses are validated as plain structured data and cached only in an application-owned cache location, never in a scan target. Generated diffs are review-required proposals and are never applied. Future dynamic validation must target only localhost or allowlisted bundled demos. See [the scanner architecture](docs/scanner-architecture.md) for decision rules and limitations.

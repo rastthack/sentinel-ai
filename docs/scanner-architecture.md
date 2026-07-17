@@ -42,7 +42,7 @@ Mappings, models, fields, routes, middleware, and candidates are sorted before s
 - Authentication rules do not interpret arbitrary helper call graphs or runtime configuration.
 - Prisma support targets the bundled schema and common attributes, not every Prisma language feature.
 - Route-model mapping does not yet follow named handlers into service/repository layers.
-- The scanner performs no DAST, target execution, GPT call, exploit validation, or patch generation.
+- The scanner performs no DAST, target execution, exploit validation, or patch application.
 
 ## Deterministic authorization analysis
 
@@ -78,4 +78,12 @@ Finding identity is a stable SHA-256-derived prefix over rule, method, normalize
 - Named handlers and service/repository abstractions are reported as incomplete rather than assumed unsafe.
 - Conditional control flow and every possible JavaScript equality or membership idiom are not modeled.
 - Missing-authentication analysis is intentionally conservative and excludes common public lifecycle paths.
-- Sentinel currently produces deterministic static findings only. GPT-5.6 explanations and remediation are planned for a later milestone.
+- AI enrichment is optional and does not change deterministic findings, routes, evidence, severity, or risk scoring.
+
+## Optional AI explanation layer
+
+Milestone 6 can enrich an existing deterministic finding when `SENTINEL_AI_ENABLED=true` and a server-side `OPENAI_API_KEY` is present. The configured model is `OPENAI_MODEL`, defaulting to `gpt-5.6-sol`. Prompt input is limited to structured finding, route, graph, risk, recommendation, and relative source-location metadata; it excludes source contents, absolute paths, environment files, and credentials.
+
+The provider uses Pydantic structured output and validates plain text, a single safe relative patch target, unified-diff form, review-required status, and a verification checklist. It rejects destructive instructions and diffs that remove recognized security controls. The patch remains a proposal: Sentinel does not write it to a repository.
+
+Validated responses are cached using a finding ID and prompt hash. The default cache is application-owned (`~/Library/Caches/sentinel-ai` on macOS, platform equivalents elsewhere), or may be set with `SENTINEL_AI_CACHE_PATH`. A cache path must never be a scan root or target. Provider and cache failures return sanitized `partial` or `unavailable` AI status while the deterministic scan response remains complete.

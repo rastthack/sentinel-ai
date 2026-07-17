@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AIAnalysis, Finding, FindingDetails } from "./finding-details";
 
 type Route = {
   route_id: string;
@@ -25,20 +26,6 @@ type OwnershipCandidate = {
   model: string;
   field: string;
   candidate_type: string;
-};
-
-type Finding = {
-  finding_id: string;
-  rule_id: string;
-  severity: "informational" | "low" | "medium" | "high" | "critical";
-  confidence: number;
-  method: string;
-  path: string;
-  model: string | null;
-  description: string;
-  evidence: string[];
-  recommendation: string;
-  risk_score: number;
 };
 
 type ScanResponse = {
@@ -72,6 +59,7 @@ type ScanResponse = {
     decision: "potential_bola" | "controlled" | "not_applicable" | "inconclusive";
   }>;
   findings: Finding[];
+  ai: AIAnalysis;
 };
 
 type ScanState =
@@ -84,13 +72,6 @@ function authenticationLabel(value: Route["authentication_required"]): string {
   if (value === true) return "Protected";
   if (value === false) return "Public";
   return "Unknown";
-}
-
-function severityClasses(severity: Finding["severity"]): string {
-  if (severity === "critical") return "border-rose-300/30 bg-rose-300/10 text-rose-200";
-  if (severity === "high") return "border-orange-300/30 bg-orange-300/10 text-orange-200";
-  if (severity === "medium") return "border-amber-300/30 bg-amber-300/10 text-amber-200";
-  return "border-sky-300/30 bg-sky-300/10 text-sky-200";
 }
 
 export function ApplicationStructure() {
@@ -242,49 +223,7 @@ export function ApplicationStructure() {
                 </p>
               ) : (
                 <div className="mt-6 space-y-4">
-                  {scan.findings.map((finding) => (
-                    <article className="rounded-xl border border-white/[0.08] bg-slate-950/40 p-5" key={finding.finding_id}>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className={`rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] ${severityClasses(finding.severity)}`}>
-                          {finding.severity}
-                        </span>
-                        <span className="font-mono text-xs text-slate-400">{finding.finding_id}</span>
-                        <span className="font-mono text-xs text-slate-600">{finding.rule_id}</span>
-                      </div>
-                      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
-                        <div>
-                          <p className="font-mono text-sm text-slate-200">{finding.method} {finding.path}</p>
-                          <p className="mt-2 text-sm leading-6 text-slate-400">{finding.description}</p>
-                        </div>
-                        <dl className="grid grid-cols-3 gap-4 text-right font-mono text-xs">
-                          <div>
-                            <dt className="text-slate-600">Model</dt>
-                            <dd className="mt-1 text-slate-300">{finding.model ?? "—"}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-slate-600">Confidence</dt>
-                            <dd className="mt-1 text-slate-300">{Math.round(finding.confidence * 100)}%</dd>
-                          </div>
-                          <div>
-                            <dt className="text-slate-600">Risk</dt>
-                            <dd className="mt-1 text-slate-300">{finding.risk_score}/100</dd>
-                          </div>
-                        </dl>
-                      </div>
-                      <div className="mt-5 grid gap-5 border-t border-white/[0.06] pt-5 lg:grid-cols-2">
-                        <div>
-                          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600">Evidence</p>
-                          <ul className="mt-2 space-y-1.5 text-sm text-slate-400">
-                            {finding.evidence.map((item) => <li key={item}>· {item}</li>)}
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600">Recommendation</p>
-                          <p className="mt-2 text-sm leading-6 text-slate-400">{finding.recommendation}</p>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
+                  {scan.findings.map((finding) => <FindingDetails ai={scan.ai} finding={finding} key={finding.finding_id} />)}
                 </div>
               )}
             </section>

@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from sentinel_api.scanner.ai.explanation import AIAnalysis
 from sentinel_api.scanner.analysis.models import (
     AnalysisSummary,
     AuthorizationFinding,
@@ -137,6 +138,7 @@ class RepositoryScanResponse(BaseModel):
     analysis_summary: AnalysisSummary
     authorization_graphs: list[AuthorizationGraph]
     findings: list[AuthorizationFinding]
+    ai: AIAnalysis
     warnings: list[str]
 
 

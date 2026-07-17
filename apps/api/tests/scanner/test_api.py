@@ -87,7 +87,9 @@ def test_bundled_taskflow_scan_succeeds() -> None:
     assert finding.operation == "read_one"
     assert finding.ownership_candidate == "ownerId"
     assert finding.risk_score == 82
-    assert not any(key in serialized.casefold() for key in ("gpt", "patch", "exploit"))
+    assert response.ai.status == "disabled"
+    assert response.ai.results == []
+    assert "user-a-demo-token" not in serialized
 
 
 def test_bundled_finding_identifier_is_stable() -> None:
@@ -112,6 +114,8 @@ def test_demo_api_response_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:
     assert payload["repository"]["relative_path"] == "demo/vulnerable-taskflow"
     assert payload["analysis_summary"]["potential_bola_count"] == 1
     assert payload["findings"][0]["rule_id"] == "AUTH-BOLA"
+    assert payload["ai"]["status"] == "disabled"
+    assert payload["ai"]["results"] == []
     assert len(payload["authorization_graphs"]) == 7
     assert str(REPOSITORY_ROOT) not in serialized
     assert "INTENTIONALLY VULNERABLE" not in serialized

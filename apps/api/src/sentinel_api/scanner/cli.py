@@ -2,11 +2,12 @@
 
 import argparse
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 from sentinel_api.scanner.exceptions import ScannerError
 from sentinel_api.scanner.models import RepositoryScanResponse
-from sentinel_api.scanner.service import build_scan_service
+from sentinel_api.scanner.service import ScanService, build_scan_service
 
 
 def _summary(response: RepositoryScanResponse) -> str:
@@ -67,10 +68,26 @@ def _summary(response: RepositoryScanResponse) -> str:
                 f"Risk score: {finding.risk_score}",
             ]
         )
+    lines.extend(["", f"AI explanation: {response.ai.status}"])
+    for result in response.ai.results:
+        lines.extend(
+            [
+                f"AI finding: {result.finding_id}",
+                f"Explanation: {result.explanation.summary}",
+                f"Root cause: {result.root_cause}",
+                "Patch proposal:",
+                result.patch.diff,
+                "Verification checklist:",
+                *(f"  [ ] {item.check}" for item in result.verification.items),
+            ]
+        )
     return "\n".join(lines)
 
 
-def main() -> int:
+def main(
+    argv: list[str] | None = None,
+    service_builder: Callable[[Path | None], ScanService] = build_scan_service,
+) -> int:
     """Run a safe local scan and write JSON or a human-readable summary."""
     parser = argparse.ArgumentParser(description="Statically inspect an allowed local repository")
     parser.add_argument(
@@ -88,14 +105,22 @@ def main() -> int:
         default="json",
         help="Output format (default: json)",
     )
-    arguments = parser.parse_args()
+    parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="Generate optional GPT explanation for deterministic findings",
+    )
+    arguments = parser.parse_args(argv)
 
     requested = Path(arguments.repository_path).expanduser()
     if not requested.is_absolute():
         requested = (Path.cwd() / requested).resolve()
 
     try:
-        response = build_scan_service(arguments.scan_root).scan(requested)
+        response = service_builder(arguments.scan_root).scan(
+            requested,
+            explain=arguments.explain,
+        )
     except ScannerError as error:
         print(json.dumps({"error": {"code": error.code, "message": error.public_message}}))
         return 2
