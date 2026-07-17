@@ -1,6 +1,7 @@
 # JavaScript
 node_modules/
 .next/
+dist/
 out/
 coverage/
 *.tsbuildinfo
@@ -14,6 +15,9 @@ __pycache__/
 .venv/
 venv/
 htmlcov/
+*.db
+*.db-journal
+demo/vulnerable-taskflow/src/generated/prisma/
 
 # Environment and local tooling
 .env

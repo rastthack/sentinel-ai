@@ -60,3 +60,19 @@ apps/api/.venv/bin/pytest apps/api
 ```
 
 If the frontend reports that the API is unavailable, confirm FastAPI is running and that `API_URL` is reachable from the Next.js server process.
+
+## TaskFlow AI demo
+
+TaskFlow AI has an independent dependency set and database lifecycle:
+
+```bash
+cd demo/vulnerable-taskflow
+cp .env.example .env
+npm install
+npm run prisma:generate
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
+
+The demo listens only on `127.0.0.1:4000` by default. It is intentionally vulnerable and must not be exposed publicly. See its [dedicated README](../demo/vulnerable-taskflow/README.md) for credentials, API examples, Docker setup, and the exact vulnerability boundary.

@@ -1,0 +1,48 @@
+{
+  "name": "taskflow-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A deliberately vulnerable project-management SaaS demo for Sentinel AI",
+  "type": "module",
+  "scripts": {
+    "postinstall": "prisma generate",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/src/server.js",
+    "lint": "eslint src prisma scripts tests --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "pretest": "cross-env DATABASE_URL=file:./test.db npm run db:migrate",
+    "test": "vitest run",
+    "prisma:generate": "prisma generate",
+    "predb:migrate": "tsx scripts/ensure-database.ts",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:reset": "tsx scripts/reset.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "prisma": "^7.8.0",
+    "tsx": "^4.20.6"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.1",
+    "@types/supertest": "^6.0.3",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.39.1",
+    "supertest": "^7.1.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vitest": "^4.0.13"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "overrides": {
+    "@hono/node-server": "^1.19.13"
+  }
+}

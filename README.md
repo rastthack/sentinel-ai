@@ -2,16 +2,22 @@
 
 > **Find it. Prove it. Fix it. Verify it.**
 
-Sentinel AI is an evidence-driven security reviewer for AI-generated web applications. This repository currently contains the initial monorepo foundation: a Next.js interface, a FastAPI service, and placeholders for the controlled vulnerable demo and future security rules.
+Sentinel AI is an evidence-driven security reviewer for AI-generated web applications. This repository contains the Next.js interface, FastAPI service, and a bundled controlled demo target.
 
 Repository scanning, vulnerability reproduction, and patch generation are intentionally not implemented yet.
+
+## Bundled vulnerable demo
+
+[TaskFlow AI](demo/vulnerable-taskflow/README.md) is a separate, realistic Express/TypeScript project-management SaaS application bundled under `demo/vulnerable-taskflow`. It intentionally contains exactly one documented BOLA vulnerability in `GET /api/projects/:id` for future, controlled Sentinel AI validation.
+
+TaskFlow AI is not Sentinel AI. It must remain localhost-only and must never be deployed to a public or production environment.
 
 ## Repository layout
 
 ```text
 apps/web/                 Next.js, TypeScript, and Tailwind CSS
 apps/api/                 FastAPI, Pydantic, pytest, Ruff, and mypy
-demo/vulnerable-taskflow/ Reserved for the bundled controlled demo
+demo/vulnerable-taskflow/ TaskFlow AI controlled vulnerable demo
 docs/                     Architecture and development documentation
 rules/                    Future deterministic security rules
 scripts/                  Future safe automation helpers

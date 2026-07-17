@@ -8,10 +8,11 @@
   "scripts": {
     "dev:web": "npm run dev --workspace @sentinel/web",
     "dev:api": "apps/api/.venv/bin/uvicorn sentinel_api.main:app --reload --app-dir apps/api/src",
-    "lint": "npm run lint --workspace @sentinel/web && apps/api/.venv/bin/ruff check apps/api",
-    "typecheck": "npm run typecheck --workspace @sentinel/web && apps/api/.venv/bin/mypy apps/api/src apps/api/tests",
-    "test": "npm run test --workspace @sentinel/web && apps/api/.venv/bin/pytest apps/api",
-    "build": "npm run build --workspace @sentinel/web"
+    "dev:demo": "npm --prefix demo/vulnerable-taskflow run dev",
+    "lint": "npm run lint --workspace @sentinel/web && apps/api/.venv/bin/ruff check apps/api && npm --prefix demo/vulnerable-taskflow run lint",
+    "typecheck": "npm run typecheck --workspace @sentinel/web && apps/api/.venv/bin/mypy apps/api/src apps/api/tests && npm --prefix demo/vulnerable-taskflow run typecheck",
+    "test": "npm run test --workspace @sentinel/web && apps/api/.venv/bin/pytest apps/api && npm --prefix demo/vulnerable-taskflow test",
+    "build": "npm run build --workspace @sentinel/web && npm --prefix demo/vulnerable-taskflow run build"
   },
   "engines": {
     "node": ">=22"

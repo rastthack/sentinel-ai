@@ -1,0 +1,17 @@
+services:
+  taskflow:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: file:/app/prisma/data/taskflow.db
+      HOST: 0.0.0.0
+      PORT: 4000
+      NODE_ENV: production
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - taskflow-data:/app/prisma/data
+    restart: unless-stopped
+
+volumes:
+  taskflow-data:
