@@ -4,6 +4,12 @@
 
 Sentinel AI is an evidence-driven security reviewer for AI-generated web applications. This repository contains the Next.js interface, FastAPI service, and a bundled controlled demo target.
 
+## TaskFlow demo experience
+
+Milestone 7 provides a one-click, demo-first security review in the web app. Run `npm run dev:api` and `npm run dev:web`, open `http://localhost:3000`, then select **Run TaskFlow Demo Scan**. The UI uses the real bundled-demo scan response and clearly separates deterministic evidence from optional AI guidance and review-required patch proposals.
+
+GitHub cloning, ZIP upload, scan history, exports, deployment, and automatic remediation verification are intentionally deferred. TaskFlow AI is a bundled intentionally vulnerable demo, not a customer repository.
+
 Milestone 6 keeps deterministic static authorization findings as the source of truth and adds an opt-in, structured GPT-5.6 Sol explanation layer. It can explain an existing finding and propose a minimal review-required diff; it never creates findings, executes targets, applies patches, or performs exploit reproduction.
 
 ## Static repository scanner

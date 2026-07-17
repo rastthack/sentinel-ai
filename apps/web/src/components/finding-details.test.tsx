@@ -1,51 +1,16 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { FindingDetails, formatDiffLines } from "./finding-details";
+import { FindingDetails } from "./finding-details";
+import type { AIAnalysis, Finding } from "@/lib/scan-types";
 
-const finding = {
-  finding_id: "AUTH-BOLA-test",
-  rule_id: "AUTH-BOLA",
-  severity: "high" as const,
-  confidence: 0.95,
-  method: "GET",
-  path: "/api/projects/:id",
-  model: "Project",
-  description: "A project lookup lacks ownership enforcement.",
-  evidence: ["Identifier reaches a direct project selector."],
-  recommendation: "Scope the selector to the authenticated owner.",
-  risk_score: 82,
-};
-
-const completeAI = {
-  status: "complete" as const,
-  errors: [],
-  results: [{
-    finding_id: finding.finding_id,
-    explanation: { summary: "Summary", technical_explanation: "Technical details", business_impact: "Cross-user read" },
-    root_cause: "Missing owner filter",
-    remediation: { priority: "high", strategy: "ownership_filter", steps: ["Add owner filter"] },
-    patch: { diff: "--- a/src/routes/projects.ts\n+++ b/src/routes/projects.ts\n@@ -1 +1 @@\n- old\n+ ownerId", review_required: true as const, safety_notes: ["Review"] },
-    verification: { items: [{ check: "Verify cross-user access is rejected", required: true }] },
-    cached: false,
-  }],
-};
+const finding: Finding = { finding_id: "AUTH-BOLA-D1D193AD3E", rule_id: "AUTH-BOLA", title: "Potential BOLA / IDOR", severity: "high", confidence: .98, method: "GET", path: "/api/projects/:id", model: "Project", operation: "read_one", ownership_candidate: "ownerId", source_file: "src/routes/projects.ts", line_number: 21, description: "Missing ownership enforcement.", evidence: ["A parameter reaches a project selector."], recommendation: "Filter by owner.", risk_score: 82, risk_components: [{ name: "Client identifier", points: 20 }], cwe: ["CWE-639"], owasp: ["API1:2023"] };
+const disabled: AIAnalysis = { status: "disabled", results: [], errors: [] };
+const complete: AIAnalysis = { status: "complete", errors: [], results: [{ finding_id: finding.finding_id, explanation: { summary: "Model summary", technical_explanation: "Technical detail", business_impact: "Business impact", why_detected: "Why", confidence_reasoning: "Confidence", false_positive_notes: "Notes" }, root_cause: "Missing owner filter", remediation: { priority: "high", strategy: "ownership_filter", steps: ["Add owner constraint"] }, patch: { source_file: "src/routes/projects.ts", diff: "--- a/src/routes/projects.ts\n+++ b/src/routes/projects.ts\n@@ -1 +1 @@\n+ ownerId", review_required: true, safety_notes: ["Review"] }, verification: { items: [{ check: "Re-run scanner", required: true }] } }] };
 
 describe("FindingDetails", () => {
-  it("renders all review tabs and deterministic evidence", () => {
-    const html = renderToStaticMarkup(<FindingDetails ai={{ status: "disabled", errors: [], results: [] }} finding={finding} />);
-    expect(html).toContain("Overview");
-    expect(html).toContain("Patch proposal");
-    expect(html).toContain(finding.description);
-  });
-
-  it("renders a review-required escaped patch and verification checklist", () => {
-    const html = renderToStaticMarkup(<FindingDetails ai={completeAI} finding={finding} initialTab="patch" />);
-    expect(html).toContain("Review required");
-    expect(html).toContain("ownerId");
-    expect(html).not.toContain("<script>");
-  });
-
-  it("classifies diff additions and removals without rendering HTML", () => {
-    expect(formatDiffLines("- old\n+ new")).toEqual([{ text: "- old", kind: "removal" }, { text: "+ new", kind: "addition" }]);
-  });
+  it("renders deterministic overview without unsafe HTML", () => { const html = renderToStaticMarkup(<FindingDetails ai={disabled} finding={{ ...finding, description: "<script>bad</script>" }} />); expect(html).toContain("Potential BOLA / IDOR"); expect(html).toContain("&lt;script&gt;bad&lt;/script&gt;"); expect(html).not.toContain("<script>bad</script>"); });
+  it("renders every review tab", () => { const html = renderToStaticMarkup(<FindingDetails ai={disabled} finding={finding} />); ["Overview", "Evidence", "AI Explanation", "Remediation", "Patch", "Verification"].forEach((tab) => expect(html).toContain(tab)); });
+  it("renders disabled AI guidance", () => { const html = renderToStaticMarkup(<FindingDetails ai={disabled} finding={finding} initialTab="AI Explanation" />); expect(html).toContain("AI explanation is disabled"); });
+  it("renders complete AI, review-required patch, and verification as text", () => { const patch = renderToStaticMarkup(<FindingDetails ai={complete} finding={finding} initialTab="Patch" />); const verify = renderToStaticMarkup(<FindingDetails ai={complete} finding={finding} initialTab="Verification" />); expect(patch).toContain("Review-required patch proposal"); expect(patch).toContain("ownerId"); expect(verify).toContain("Re-run scanner"); });
+  it("renders unavailable and partial AI states", () => { const unavailable = renderToStaticMarkup(<FindingDetails ai={{ status: "unavailable", results: [], errors: [] }} finding={finding} initialTab="AI Explanation" />); const partial = renderToStaticMarkup(<FindingDetails ai={{ status: "partial", results: [], errors: [] }} finding={finding} initialTab="AI Explanation" />); expect(unavailable).toContain("could not be generated"); expect(partial).toContain("Some AI guidance"); });
 });

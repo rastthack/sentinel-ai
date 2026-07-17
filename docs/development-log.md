@@ -108,3 +108,21 @@
 - `docker compose config --quiet` — passed configuration validation.
 - Compiled-server smoke test — health returned 200, User A listed only Project A, and the controlled BOLA request returned Project B to User A as intended.
 - `npm audit --omit=dev` — found zero production dependency vulnerabilities.
+# 2026-07-18 — Milestone 7: Product Experience and TaskFlow Demo Interface
+
+### Codex contribution
+
+- Built a responsive demo-first Sentinel web shell, real TaskFlow scan launcher, honest pending state, security dashboard, searchable finding list, and detailed deterministic/AI review tabs.
+- Kept the existing API and deterministic scanner contract unchanged; the UI reads real response values and never exposes local scan paths.
+- Added frontend contract and rendering coverage and documented the demo workflow and deferrals.
+
+### Human decisions
+
+- The bundled TaskFlow AI scan is the only supported product workflow in this milestone.
+- AI guidance remains optional and non-authoritative; generated patches remain review-required text proposals.
+- GitHub cloning, ZIP input, history, exports, automated verification, and deployment are deferred to Milestone 8 or later.
+
+### Tests run
+
+- Frontend Vitest, ESLint, strict TypeScript, and production build.
+- Backend pytest, Ruff, and strict mypy regression checks.

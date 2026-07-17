@@ -20,7 +20,7 @@ async function fetchHealth(): Promise<HealthResponse> {
   return (await response.json()) as HealthResponse;
 }
 
-export function ApiStatus() {
+export function ApiStatus({ compact = false }: { compact?: boolean }) {
   const [check, setCheck] = useState<CheckState>({ state: "checking" });
 
   const checkHealth = useCallback(async () => {
@@ -53,6 +53,7 @@ export function ApiStatus() {
 
   const online = check.state === "online";
 
+  if (compact) return <span className="flex items-center gap-2 text-xs text-slate-400" role="status" aria-live="polite"><span className={`size-2 rounded-full ${online ? "bg-emerald-300" : check.state === "checking" ? "bg-amber-300" : "bg-rose-400"}`} />{online ? "Backend connected" : check.state === "checking" ? "Checking backend" : "Backend unavailable"}</span>;
   return (
     <aside className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111a27]/80 p-1 shadow-2xl shadow-black/20 backdrop-blur">
       <div className="rounded-[0.8rem] border border-white/[0.06] bg-[#0c141f] p-6">

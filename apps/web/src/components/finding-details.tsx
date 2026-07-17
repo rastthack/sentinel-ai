@@ -1,100 +1,18 @@
 "use client";
-
 import { useState } from "react";
+import type { AIAnalysis, Finding } from "@/lib/scan-types";
 
-export type Finding = {
-  finding_id: string;
-  rule_id: string;
-  severity: "informational" | "low" | "medium" | "high" | "critical";
-  confidence: number;
-  method: string;
-  path: string;
-  model: string | null;
-  description: string;
-  evidence: string[];
-  recommendation: string;
-  risk_score: number;
-};
+type Tab = "Overview" | "Evidence" | "AI Explanation" | "Remediation" | "Patch" | "Verification";
+const tabs: Tab[] = ["Overview", "Evidence", "AI Explanation", "Remediation", "Patch", "Verification"];
 
-type AIResult = {
-  finding_id: string;
-  explanation: { summary: string; technical_explanation: string; business_impact: string };
-  root_cause: string;
-  remediation: { priority: string; strategy: string; steps: string[] };
-  patch: { diff: string; review_required: true; safety_notes: string[] };
-  verification: { items: Array<{ check: string; required: boolean }> };
-  cached: boolean;
-};
-
-export type AIAnalysis = {
-  status: "disabled" | "complete" | "partial" | "unavailable";
-  results: AIResult[];
-  errors: Array<{ finding_id: string | null; message: string }>;
-};
-
-type FindingTab = "overview" | "evidence" | "ai" | "patch" | "verify";
-
-const tabs: Array<{ id: FindingTab; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "evidence", label: "Evidence" },
-  { id: "ai", label: "AI detail" },
-  { id: "patch", label: "Patch proposal" },
-  { id: "verify", label: "Verification" },
-];
-
-export function formatDiffLines(diff: string): Array<{ text: string; kind: string }> {
-  return diff.split("\n").map((text) => ({
-    text,
-    kind: text.startsWith("+") && !text.startsWith("+++") ? "addition" : text.startsWith("-") && !text.startsWith("---") ? "removal" : "context",
-  }));
+export function FindingDetails({ finding, ai, initialTab = "Overview" }: { finding: Finding; ai: AIAnalysis; initialTab?: Tab }) {
+  const [tab, setTab] = useState<Tab>(initialTab); const result = ai.results.find((item) => item.finding_id === finding.finding_id);
+  return <section aria-labelledby="detail-title" className="mt-8 rounded-xl border border-white/[.08] bg-[#0c141f] p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-mono text-xs text-slate-500">{finding.finding_id} · {finding.rule_id}</p><h2 className="mt-1 text-2xl font-semibold" id="detail-title">{finding.title}</h2></div><span className="rounded-full border border-orange-300/30 px-3 py-1 text-sm text-orange-200">{finding.severity} · risk {finding.risk_score}</span></div><div className="mt-6 flex overflow-x-auto border-b border-white/[.08]" role="tablist">{tabs.map((item) => <button aria-controls={`detail-${item}`} aria-selected={tab === item} className={`shrink-0 border-b-2 px-3 py-3 text-sm ${tab === item ? "border-emerald-300 text-emerald-300" : "border-transparent text-slate-400"}`} key={item} onClick={() => setTab(item)} role="tab" type="button">{item}</button>)}</div><div className="pt-5 text-sm leading-6 text-slate-300" id={`detail-${tab}`} role="tabpanel">{tab === "Overview" && <Overview finding={finding} />}{tab === "Evidence" && <Evidence finding={finding} />}{tab === "AI Explanation" && <AIExplanation ai={ai} result={result} />}{tab === "Remediation" && <Remediation result={result} />}{tab === "Patch" && <Patch result={result} />}{tab === "Verification" && <Verification result={result} />}</div></section>;
 }
 
-export function FindingDetails({
-  finding,
-  ai,
-  initialTab = "overview",
-}: {
-  finding: Finding;
-  ai: AIAnalysis;
-  initialTab?: FindingTab;
-}) {
-  const [activeTab, setActiveTab] = useState<FindingTab>(initialTab);
-  const result = ai.results.find((item) => item.finding_id === finding.finding_id);
-
-  return (
-    <article className="rounded-xl border border-white/[0.08] bg-slate-950/40 p-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="rounded-full border border-orange-300/30 bg-orange-300/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-orange-200">{finding.severity}</span>
-        <span className="font-mono text-xs text-slate-400">{finding.finding_id}</span>
-        <span className="font-mono text-xs text-slate-600">{finding.rule_id}</span>
-      </div>
-      <p className="mt-4 font-mono text-sm text-slate-200">{finding.method} {finding.path}</p>
-      <div aria-label="Finding details" className="mt-5 flex flex-wrap gap-2" role="tablist">
-        {tabs.map((tab) => <button aria-controls={`panel-${finding.finding_id}-${tab.id}`} aria-selected={activeTab === tab.id} className="rounded-md border border-white/[0.08] px-3 py-1.5 text-xs text-slate-300" key={tab.id} onClick={() => setActiveTab(tab.id)} role="tab" type="button">{tab.label}</button>)}
-      </div>
-      <div className="mt-5 text-sm leading-6 text-slate-400" id={`panel-${finding.finding_id}-${activeTab}`} role="tabpanel">
-        {activeTab === "overview" ? <><p>{finding.description}</p><p className="mt-3">Recommendation: {finding.recommendation}</p><p className="mt-3">Confidence {Math.round(finding.confidence * 100)}% · Risk {finding.risk_score}/100 · Model {finding.model ?? "unknown"}</p></> : null}
-        {activeTab === "evidence" ? <ul className="space-y-2">{finding.evidence.map((item) => <li key={item}>· {item}</li>)}</ul> : null}
-        {activeTab === "ai" ? <AIDetail ai={ai} result={result} /> : null}
-        {activeTab === "patch" ? <PatchDetail result={result} /> : null}
-        {activeTab === "verify" ? <VerificationDetail result={result} /> : null}
-      </div>
-    </article>
-  );
-}
-
-function AIDetail({ ai, result }: { ai: AIAnalysis; result: AIResult | undefined }) {
-  if (ai.status === "disabled") return <p>AI explanation is disabled. Deterministic findings remain available.</p>;
-  if (!result) return <p>{ai.errors.find((error) => error.finding_id === null || error.finding_id === undefined)?.message ?? "AI explanation is unavailable; deterministic findings remain valid."}</p>;
-  return <><p>{result.explanation.summary}</p><p className="mt-3">{result.explanation.technical_explanation}</p><p className="mt-3">Impact: {result.explanation.business_impact}</p><p className="mt-3">Root cause: {result.root_cause}</p></>;
-}
-
-function PatchDetail({ result }: { result: AIResult | undefined }) {
-  if (!result) return <p>No AI patch proposal is available. Patches are never applied automatically.</p>;
-  return <><p className="mb-3 text-amber-200">Review required before applying this proposal.</p><pre className="overflow-x-auto rounded-lg border border-white/[0.08] bg-black/30 p-3 font-mono text-xs">{formatDiffLines(result.patch.diff).map((line, index) => <span className={line.kind === "addition" ? "block text-emerald-300" : line.kind === "removal" ? "block text-rose-300" : "block text-slate-400"} key={`${index}-${line.text}`}>{line.text}{"\n"}</span>)}</pre></>;
-}
-
-function VerificationDetail({ result }: { result: AIResult | undefined }) {
-  if (!result) return <p>No verification checklist is available.</p>;
-  return <ul className="space-y-2">{result.verification.items.map((item) => <li key={item.check}>[{item.required ? "required" : "optional"}] {item.check}</li>)}</ul>;
-}
+function Overview({ finding }: { finding: Finding }) { const facts = [["Status", "Open"], ["Confidence", `${Math.round(finding.confidence * 100)}%`], ["Method", finding.method], ["Route", finding.path], ["Model", finding.model ?? "Unknown"], ["Operation", finding.operation ?? "Unknown"], ["Ownership candidate", finding.ownership_candidate ?? "Unknown"], ["Source", `${finding.source_file}:${finding.line_number}`], ["CWE", finding.cwe.join(", ")], ["OWASP", finding.owasp.join(", ")]]; return <><p>{finding.description}</p><dl className="mt-5 grid gap-3 sm:grid-cols-2">{facts.map(([label, value]) => <div className="rounded border border-white/[.08] p-3" key={label}><dt className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{label}</dt><dd className="mt-1 break-words text-slate-200">{value}</dd></div>)}</dl></>; }
+function Evidence({ finding }: { finding: Finding }) { return <><p className="font-mono text-xs uppercase tracking-wider text-emerald-300">Deterministic evidence</p><ul className="mt-3 space-y-2">{finding.evidence.map((item) => <li key={item}>• {item}</li>)}</ul><p className="mt-6 font-mono text-xs uppercase tracking-wider text-slate-500">Risk score components</p><ul className="mt-3 grid gap-2 sm:grid-cols-2">{finding.risk_components.map((item) => <li className="rounded border border-white/[.08] p-2" key={item.name}>{item.name}: +{item.points}</li>)}</ul></>; }
+function AIExplanation({ ai, result }: { ai: AIAnalysis; result: AIAnalysis["results"][number] | undefined }) { if (ai.status === "disabled") return <p>AI explanation is disabled. Deterministic findings remain available.</p>; if (ai.status === "unavailable") return <p>AI explanation could not be generated. The security finding is unaffected.</p>; if (!result) return <p>{ai.status === "partial" ? "Some AI guidance could not be generated." : "AI explanation could not be generated. The security finding is unaffected."}</p>; return <dl className="space-y-4">{[["Summary", result.explanation.summary], ["Technical explanation", result.explanation.technical_explanation], ["Root cause", result.root_cause], ["Business impact", result.explanation.business_impact], ["Why detected", result.explanation.why_detected], ["Confidence reasoning", result.explanation.confidence_reasoning], ["False-positive notes", result.explanation.false_positive_notes]].map(([label, value]) => <div key={label}><dt className="font-mono text-xs uppercase tracking-wider text-slate-500">{label}</dt><dd className="mt-1">{value}</dd></div>)}</dl>; }
+function Remediation({ result }: { result: AIAnalysis["results"][number] | undefined }) { return !result ? <p>AI remediation is unavailable. Review the deterministic recommendation before making changes.</p> : <><p>Priority: <b>{result.remediation.priority}</b> · Strategy: <b>{result.remediation.strategy}</b></p><ol className="mt-4 list-decimal space-y-2 pl-5">{result.remediation.steps.map((step) => <li key={step}>{step}</li>)}</ol><p className="mt-5 text-slate-400">Security considerations: review the change in context and preserve existing authentication controls.</p></>; }
+function Patch({ result }: { result: AIAnalysis["results"][number] | undefined }) { return !result ? <p>No patch proposal is available. Patches are never applied automatically.</p> : <><p className="font-mono text-xs uppercase tracking-wider text-amber-200">Review-required patch proposal</p><p className="mt-2">Target: {result.patch.source_file}</p><pre className="mt-4 overflow-x-auto rounded border border-white/[.08] bg-black/30 p-4 text-xs text-slate-300">{result.patch.diff}</pre><p className="mt-3 text-slate-400">Human review is required before any patch is applied.</p></>; }
+function Verification({ result }: { result: AIAnalysis["results"][number] | undefined }) { return !result ? <p>No verification checklist is available. Automatic fix verification belongs to the next milestone.</p> : <><ul className="space-y-2">{result.verification.items.map((item) => <li key={item.check}>[{item.required ? "manual check required" : "optional"}] {item.check}</li>)}</ul><p className="mt-5 text-slate-400">Automated remediation verification belongs to the next milestone.</p></>; }

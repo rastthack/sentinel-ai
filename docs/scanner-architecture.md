@@ -87,3 +87,7 @@ Milestone 6 can enrich an existing deterministic finding when `SENTINEL_AI_ENABL
 The provider uses Pydantic structured output and validates plain text, a single safe relative patch target, unified-diff form, review-required status, and a verification checklist. It rejects destructive instructions and diffs that remove recognized security controls. The patch remains a proposal: Sentinel does not write it to a repository.
 
 Validated responses are cached using a finding ID and prompt hash. The default cache is application-owned (`~/Library/Caches/sentinel-ai` on macOS, platform equivalents elsewhere), or may be set with `SENTINEL_AI_CACHE_PATH`. A cache path must never be a scan root or target. Provider and cache failures return sanitized `partial` or `unavailable` AI status while the deterministic scan response remains complete.
+
+## Milestone 7 web presentation
+
+The web application consumes the public scan contract through the bundled-demo proxy. It presents an honest client-side waiting sequence while the non-streaming API request is pending; it does not invent server progress events. Findings, evidence, risk components, and counts are always rendered from the scan response. AI states are displayed as non-authoritative guidance, and patch proposals are text-only, review-required content. GitHub cloning, ZIP upload, history, exports, deployment, and automated fix verification are intentionally not part of this architecture.

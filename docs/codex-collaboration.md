@@ -1,5 +1,13 @@
 # Codex collaboration record
 
+## 2026-07-18 — Milestone 7
+
+The human set the bundled TaskFlow AI workflow as the sole product path. Codex created a modular frontend around the existing demo proxy rather than altering deterministic scanner behavior. The UI distinguishes authoritative deterministic evidence from optional AI explanation and never represents a patch as automatically applied.
+
+The scan progress is deliberately client-side and honest: it communicates that Sentinel is waiting for a completed non-streaming response. The result dashboard uses API fields for counts, technologies, findings, risk, and AI state; no production finding data is hard-coded. Accessibility work includes semantic sections, labelled controls, tab roles, live pending status, visible focus treatments, text labels, and safe overflow for the diff/table.
+
+No TaskFlow execution, real OpenAI call, GitHub cloning, ZIP upload, export, deployment, persistent history, or automated remediation verification was added.
+
 ## 2026-07-18 — Milestone 5
 
 The human defined deterministic authorization analysis as the complete milestone and prohibited model calls, target execution, DAST, exploitation, patches, and repository modification. Codex extended the existing private handler-source flow rather than broadening scanner permissions or adding runtime behavior.
