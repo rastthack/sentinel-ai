@@ -2,6 +2,7 @@
 
 import os
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,6 +11,14 @@ def cors_origins() -> list[str]:
     """Return explicitly configured browser origins."""
     configured = os.getenv("CORS_ORIGINS", "http://localhost:3000")
     return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+
+def github_workspace_parent() -> Path:
+    """Return the server-configured parent for application-owned GitHub workspaces."""
+    configured = os.getenv("SENTINEL_GITHUB_WORKSPACE_PARENT", "").strip()
+    parent = Path(configured).expanduser() if configured else Path(tempfile.gettempdir())
+    parent.mkdir(parents=True, exist_ok=True)
+    return parent.resolve(strict=True)
 
 
 @dataclass(frozen=True, slots=True)
