@@ -1,4 +1,4 @@
-"""Application-owned temporary workspaces for future GitHub repository acquisition."""
+"""Application-owned temporary workspaces for public GitHub repository acquisition."""
 
 import shutil
 import tempfile

@@ -38,9 +38,24 @@ describe("POST /api/scans/github", () => {
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({
       detail: {
-        code: "github_scan_failed",
+        code: "github_repository_unavailable",
         message: "The repository could not be accessed. Confirm that it is public and available.",
       },
     });
+  });
+
+  it("rejects unexpected bodies without forwarding a local path upstream", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    const localPath = "/private/example/repository";
+
+    const response = await POST(new Request("http://test/api/scans/github", {
+      method: "POST",
+      body: JSON.stringify({ repository_path: localPath }),
+    }));
+
+    expect(response.status).toBe(422);
+    expect(response.text()).resolves.not.toContain(localPath);
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });

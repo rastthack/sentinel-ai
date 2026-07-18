@@ -2,7 +2,8 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import ValidationError
 
 from sentinel_api.config import github_repository_limits
 from sentinel_api.github.acquisition import RepositoryAcquirer
@@ -59,12 +60,17 @@ def scan_demo(service: ScanServiceDependency) -> RepositoryScanResponse:
 
 
 @router.post("/github", response_model=RepositoryScanResponse)
-def scan_github_repository(
-    request: GitHubRepositoryScanRequest,
+async def scan_github_repository(
+    request: Request,
     service: GitHubScanServiceDependency,
 ) -> RepositoryScanResponse:
     """Statically scan one validated public GitHub repository URL."""
-    return _github_scan_or_error(service, request.github_url)
+    try:
+        payload: object = await request.json()
+        scan_request = GitHubRepositoryScanRequest.model_validate(payload)
+    except (ValueError, ValidationError):
+        raise _github_http_error(GitHubUrlError(), 422) from None
+    return _github_scan_or_error(service, scan_request.github_url)
 
 
 def _scan_or_error(service: ScanService, repository_path: str) -> RepositoryScanResponse:

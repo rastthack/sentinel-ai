@@ -45,11 +45,11 @@ class RecordingGitHubScanService:
         return self.response
 
 
-async def api_request(github_url: str) -> httpx.Response:
+async def api_request(body: object) -> httpx.Response:
     """Call the local ASGI application without a network listener."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        return await client.post("/api/scans/github", json={"github_url": github_url})
+        return await client.post("/api/scans/github", json=body)
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ def test_github_scan_returns_existing_response_schema(
     service = RecordingGitHubScanService(response=expected)
     override_github_service(service)
 
-    response = asyncio.run(api_request("https://github.com/owner/repository"))
+    response = asyncio.run(api_request({"github_url": "https://github.com/owner/repository"}))
     payload = response.json()
     serialized = json.dumps(payload)
 
@@ -104,7 +104,7 @@ def test_github_scan_maps_safe_domain_errors(
     service = RecordingGitHubScanService(error=error)
     override_github_service(service)
 
-    response = asyncio.run(api_request("https://github.com/owner/repository"))
+    response = asyncio.run(api_request({"github_url": "https://github.com/owner/repository"}))
 
     assert response.status_code == expected_status
     assert response.json()["detail"] == {"code": expected_code, "message": str(error)}
@@ -118,9 +118,9 @@ def test_github_scan_rejects_local_path_without_exposing_it(
     service = RecordingGitHubScanService(error=GitHubUrlError())
     override_github_service(service)
 
-    response = asyncio.run(api_request(local_path))
+    response = asyncio.run(api_request({"repository_path": local_path}))
 
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "github_url_invalid"
     assert local_path not in response.text
-    assert service.calls == [local_path]
+    assert service.calls == []

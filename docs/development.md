@@ -42,7 +42,7 @@ The web proxy uses `API_URL` on the server. FastAPI accepts direct browser reque
 
 Open the web app and select **Run TaskFlow Demo Scan**. The client calls only the existing `/api/scans/demo` proxy; it does not request a filesystem path. While the request is pending, it presents an honest staged waiting experience, then renders the completed scanner response. The dashboard remains useful when AI is disabled or unavailable: deterministic findings are the authoritative record, and AI content is guidance only.
 
-The current UI has no persisted scan history, GitHub repository input, ZIP upload, export, deployment, or automatic verification. Those capabilities are deferred until after the bundled demo is stable.
+The current UI supports public GitHub repository URLs and the bundled demo. It has no persisted scan history, ZIP upload, export, deployment, or automatic verification.
 
 ## Checks
 

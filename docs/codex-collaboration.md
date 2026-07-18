@@ -6,7 +6,7 @@ The human set the bundled TaskFlow AI workflow as the sole product path. Codex c
 
 The scan progress is deliberately client-side and honest: it communicates that Sentinel is waiting for a completed non-streaming response. The result dashboard uses API fields for counts, technologies, findings, risk, and AI state; no production finding data is hard-coded. Accessibility work includes semantic sections, labelled controls, tab roles, live pending status, visible focus treatments, text labels, and safe overflow for the diff/table.
 
-No TaskFlow execution, real OpenAI call, GitHub cloning, ZIP upload, export, deployment, persistent history, or automated remediation verification was added.
+No TaskFlow execution, real OpenAI call, ZIP upload, export, deployment, persistent history, or automated remediation verification was added. Public GitHub acquisition is available only through the bounded static scanning workflow.
 
 ## 2026-07-18 — Milestone 5
 
