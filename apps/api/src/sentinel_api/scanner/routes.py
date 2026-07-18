@@ -86,6 +86,15 @@ def scan_demo(
     return store.save(_scan_or_error(service, "demo/vulnerable-taskflow"))
 
 
+@router.get("/demo/multirule", response_model=RepositoryScanResponse)
+def scan_multirule_demo(
+    service: ScanServiceDependency,
+    store: CompletedScanStoreDependency,
+) -> RepositoryScanResponse:
+    """Statically inspect the controlled multi-rule fixture through the shared service."""
+    return store.save(_scan_or_error(service, "demo/vulnerable-multirule"))
+
+
 @router.post("/github", response_model=RepositoryScanResponse)
 async def scan_github_repository(
     request: Request,

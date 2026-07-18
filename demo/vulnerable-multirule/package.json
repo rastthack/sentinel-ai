@@ -1,0 +1,6 @@
+{
+  "name": "vulnerable-multirule",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Intentionally vulnerable local fixture for Sentinel AI scanner validation"
+}

@@ -122,6 +122,45 @@ def test_demo_api_response_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:
     assert not any("content" in file for file in payload["files"])
 
 
+def test_multirule_demo_api_response_uses_shared_deterministic_scanner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SENTINEL_SCAN_ROOT", str(REPOSITORY_ROOT))
+
+    response = asyncio.run(api_request("GET", "/api/scans/demo/multirule"))
+    payload = response.json()
+    serialized = json.dumps(payload)
+    rule_ids = {finding["rule_id"] for finding in payload["findings"]}
+    finding_ids = [finding["finding_id"] for finding in payload["findings"]]
+
+    assert response.status_code == 200
+    assert payload["repository"] == {
+        "name": "vulnerable-multirule",
+        "relative_path": "demo/vulnerable-multirule",
+    }
+    assert {
+        "SECRET-TOKEN",
+        "CORS-WILDCARD-CREDENTIALS",
+        "JWT-NONE-ALGORITHM",
+        "RATE-SENSITIVE-ROUTE",
+        "REDIRECT-UNTRUSTED",
+        "PATH-TRAVERSAL",
+        "COMMAND-UNTRUSTED",
+        "UPLOAD-UNRESTRICTED",
+    } <= rule_ids
+    assert len(finding_ids) == len(set(finding_ids))
+    assert str(REPOSITORY_ROOT) not in serialized
+    assert "sk-abcdefghijklmnopqrstuvwxyz0123456789" not in serialized
+    assert "not-a-placeholder-value" not in serialized
+    secret_evidence = [
+        evidence
+        for finding in payload["findings"]
+        if finding["category"] in {"secrets", "jwt"}
+        for evidence in finding["evidence"]
+    ]
+    assert any("<redacted>" in evidence for evidence in secret_evidence)
+
+
 def test_repository_post_scans_bundled_demo(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SENTINEL_SCAN_ROOT", str(REPOSITORY_ROOT))
 

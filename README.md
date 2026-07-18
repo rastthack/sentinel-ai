@@ -147,7 +147,7 @@ npm run dev:api
 npm run dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000), then select **Run TaskFlow Demo Scan**. The browser requests the completed scan and then the bounded reviewer response; deterministic findings remain visible if reviewer guidance is unavailable.
+Open [http://localhost:3000](http://localhost:3000), then select a controlled demo. **Run TaskFlow Demo Scan** is the focused authorization/BOLA validation path. **Run Multi-Rule Demo Scan** validates the expanded deterministic engine against controlled secrets, CORS, JWT, rate-limiting, redirect, filesystem, command-execution, and upload examples. The browser requests the completed scan and then the bounded reviewer response; deterministic findings remain visible if reviewer guidance is unavailable.
 
 ### Development Workflow
 
@@ -180,7 +180,8 @@ sentinel-ai/
 │   ├── api/                   FastAPI API, scanner, reviewer, and tests
 │   └── web/                   Next.js dashboard and frontend tests
 ├── demo/
-│   └── vulnerable-taskflow/   Controlled intentionally vulnerable SaaS demo
+│   ├── vulnerable-taskflow/   Focused authorization/BOLA validation demo
+│   └── vulnerable-multirule/  Controlled deterministic rule-engine fixture
 ├── docs/                      Development and scanner architecture notes
 ├── rules/                     Deterministic rule assets
 ├── scripts/                   Safe automation helpers
@@ -221,7 +222,11 @@ GPT-5.5 and Codex assisted with implementation, UI refinement, testing, and docu
 
 [TaskFlow AI](demo/vulnerable-taskflow/README.md) is a separate, realistic Express/TypeScript project-management SaaS application included as Sentinel AI’s controlled demonstration target. It intentionally contains exactly one documented BOLA vulnerability in `GET /api/projects/:id`, which Sentinel identifies through deterministic static analysis.
 
+[Vulnerable Multi-Rule Demo](demo/vulnerable-multirule/README.md) is a separate controlled fixture for validating supported deterministic rule families. It contains synthetic examples only for static inspection; it does not represent comprehensive vulnerability detection or full OWASP coverage.
+
 TaskFlow AI is not the Sentinel AI product. It must remain localhost-only and must never be deployed to a public or production environment.
+
+Both demos are local scanner-validation targets only. Sentinel never executes their code, and dangerous routes must not be invoked.
 
 Its independent local lifecycle is:
 

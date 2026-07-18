@@ -9,6 +9,7 @@ import {
 } from "./demo-scan-service";
 
 const payload = { scan_id: "scan-123", repository: { name: "vulnerable-taskflow" }, summary: {}, technologies: [], analysis_summary: {}, findings: [{ finding_id: "AUTH-BOLA-D1D193AD3E" }], ai: { status: "disabled", results: [], errors: [] } };
+const multiRulePayload = { scan_id: "scan-multirule", repository: { name: "vulnerable-multirule" }, summary: {}, technologies: [], analysis_summary: {}, findings: [{ finding_id: "SECRET-TOKEN-123", category: "secrets" }, { finding_id: "COMMAND-UNTRUSTED-123", category: "command_execution" }], ai: { status: "disabled", results: [], errors: [] } };
 
 const reviewPayload = {
   status: "complete",
@@ -21,8 +22,9 @@ const reviewPayload = {
 };
 
 describe("loadDemoScan", () => {
-  it("requests the demo endpoint and preserves the deterministic finding", async () => { const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status: 200 })); const result = await loadDemoScan(fetcher); expect(fetcher).toHaveBeenCalledWith("/api/scans/demo", { cache: "no-store" }); expect(result.findings).toHaveLength(1); expect(result.findings[0]?.finding_id).toBe("AUTH-BOLA-D1D193AD3E"); });
-  it("returns a sanitized error for a failed or invalid response", async () => { await expect(loadDemoScan(vi.fn().mockResolvedValue(new Response("{}", { status: 503 })))).rejects.toBeInstanceOf(DemoScanError); await expect(loadDemoScan(vi.fn().mockResolvedValue(new Response("{}", { status: 200 })))).rejects.toBeInstanceOf(DemoScanError); });
+  it("requests the TaskFlow endpoint and preserves the deterministic finding", async () => { const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status: 200 })); const result = await loadDemoScan("taskflow", fetcher); expect(fetcher).toHaveBeenCalledWith("/api/scans/demo", { cache: "no-store" }); expect(result.findings).toHaveLength(1); expect(result.findings[0]?.finding_id).toBe("AUTH-BOLA-D1D193AD3E"); });
+  it("requests the dedicated multi-rule endpoint and preserves mixed categories", async () => { const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(multiRulePayload), { status: 200 })); const result = await loadDemoScan("multirule", fetcher); expect(fetcher).toHaveBeenCalledWith("/api/scans/demo/multirule", { cache: "no-store" }); expect(result.repository.name).toBe("vulnerable-multirule"); expect(result.findings.map((finding) => finding.category)).toEqual(["secrets", "command_execution"]); });
+  it("returns a sanitized error for a failed or invalid response", async () => { await expect(loadDemoScan("taskflow", vi.fn().mockResolvedValue(new Response("{}", { status: 503 })))).rejects.toBeInstanceOf(DemoScanError); await expect(loadDemoScan("multirule", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })))).rejects.toBeInstanceOf(DemoScanError); });
 });
 
 describe("scanGitHubRepository", () => {

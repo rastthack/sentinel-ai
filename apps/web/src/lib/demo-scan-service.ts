@@ -7,8 +7,15 @@ import {
 } from "./scan-types";
 
 export class DemoScanError extends Error {
-  constructor() { super("The bundled demo scan is currently unavailable. Retry when the Sentinel API is ready."); }
+  constructor() { super("The controlled demo scan is currently unavailable. Retry when the Sentinel API is ready."); }
 }
+
+export type DemoScanTarget = "taskflow" | "multirule";
+
+const demoEndpoints: Record<DemoScanTarget, string> = {
+  taskflow: "/api/scans/demo",
+  multirule: "/api/scans/demo/multirule",
+};
 
 export class GitHubScanError extends Error {
   constructor(
@@ -25,9 +32,12 @@ export class ReviewerError extends Error {
   }
 }
 
-export async function loadDemoScan(fetcher: typeof fetch = fetch): Promise<ScanResponse> {
+export async function loadDemoScan(
+  target: DemoScanTarget = "taskflow",
+  fetcher: typeof fetch = fetch,
+): Promise<ScanResponse> {
   try {
-    const response = await fetcher("/api/scans/demo", { cache: "no-store" });
+    const response = await fetcher(demoEndpoints[target], { cache: "no-store" });
     if (!response.ok) throw new DemoScanError();
     const payload: unknown = await response.json();
     if (!isScanResponse(payload)) throw new DemoScanError();

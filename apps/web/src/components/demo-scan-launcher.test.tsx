@@ -21,6 +21,11 @@ describe("DemoScanLauncher", () => {
     expect(html).toContain("https://github.com/owner/repository");
     expect(html).toContain("Scan repository");
     expect(html).toContain("Run TaskFlow Demo Scan");
+    expect(html).toContain("Focused Authorization Demo");
+    expect(html).toContain("A controlled BOLA and ownership-validation example.");
+    expect(html).toContain("Run Multi-Rule Demo Scan");
+    expect(html).toContain("Expanded Deterministic Security Engine");
+    expect(html).toContain("Controlled examples for secrets, CORS, JWT, redirects, filesystem access, command execution, uploads, and rate limiting.");
   });
 
   it("validates only an empty or clearly non-GitHub URL on the client", () => {
@@ -38,7 +43,7 @@ describe("DemoScanLauncher", () => {
     expect(githubErrorMessage(new Error("private filesystem detail"))).toBe("The repository could not be scanned.");
   });
 
-  it("prevents duplicate GitHub submissions until the active request finishes", () => {
+  it("prevents a second demo or GitHub action until the active scan finishes", () => {
     const guard = createGitHubSubmissionGuard();
 
     expect(guard.tryStart()).toBe(true);
