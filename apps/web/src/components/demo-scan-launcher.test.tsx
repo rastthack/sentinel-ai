@@ -4,8 +4,11 @@ import { describe, expect, it } from "vitest";
 import {
   DemoScanLauncher,
   createGitHubSubmissionGuard,
+  createReviewRequestGuard,
   githubErrorMessage,
   githubUrlValidationError,
+  initialReviewerPanelState,
+  shouldApplyReviewerResult,
 } from "./demo-scan-launcher";
 import { GitHubScanError } from "../lib/demo-scan-service";
 
@@ -42,5 +45,21 @@ describe("DemoScanLauncher", () => {
     expect(guard.tryStart()).toBe(false);
     guard.finish();
     expect(guard.tryStart()).toBe(true);
+  });
+
+  it("resets review state for a new scan and rejects stale review responses", () => {
+    expect(initialReviewerPanelState()).toEqual({ kind: "loading" });
+    expect(shouldApplyReviewerResult("scan-new", "scan-new")).toBe(true);
+    expect(shouldApplyReviewerResult("scan-new", "scan-old")).toBe(false);
+  });
+
+  it("prevents duplicate active review requests but allows a retry after completion", () => {
+    const guard = createReviewRequestGuard();
+
+    expect(guard.tryStart("scan-123")).toBe(true);
+    expect(guard.tryStart("scan-123")).toBe(false);
+    expect(guard.tryStart("scan-456")).toBe(true);
+    guard.finish("scan-123");
+    expect(guard.tryStart("scan-123")).toBe(true);
   });
 });

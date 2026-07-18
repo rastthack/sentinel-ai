@@ -74,4 +74,16 @@ describe("loadAIReviewerReview", () => {
       new ReviewerError(502),
     );
   });
+
+  it("retries only the review endpoint and never starts a replacement scan", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(reviewPayload), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(reviewPayload), { status: 200 }));
+
+    await loadAIReviewerReview("scan-123", fetcher);
+    await loadAIReviewerReview("scan-123", fetcher);
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher.mock.calls.every(([url]) => url === "/api/scans/scan-123/review")).toBe(true);
+  });
 });

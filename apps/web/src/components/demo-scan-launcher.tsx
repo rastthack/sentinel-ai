@@ -35,6 +35,7 @@ export function DemoScanLauncher() {
   const [githubValidationError, setGithubValidationError] = useState<string | null>(null);
   const [githubSubmissionGuard] = useState(createGitHubSubmissionGuard);
   const reviewRef = useRef<HTMLDivElement>(null);
+  const reviewRequestGuard = useRef(createReviewRequestGuard());
   const githubLoading = state.kind === "github-loading";
 
   useEffect(() => {
@@ -94,26 +95,32 @@ export function DemoScanLauncher() {
       scan,
       selected: scan.findings[0] ?? null,
       source,
-      reviewer: { kind: "loading" },
+      reviewer: initialReviewerPanelState(),
     });
     void loadReviewer(scan.scan_id);
   }
 
   async function loadReviewer(scanId: string) {
+    if (!reviewRequestGuard.current.tryStart(scanId)) return;
+    setState((current) => current.kind === "ready" && current.scan.scan_id === scanId
+      ? { ...current, reviewer: { kind: "loading" } }
+      : current);
     try {
       const review = await loadAIReviewerReview(scanId);
-      setState((current) => current.kind === "ready" && current.scan.scan_id === scanId
+      setState((current) => current.kind === "ready" && shouldApplyReviewerResult(current.scan.scan_id, scanId)
         ? { ...current, reviewer: { kind: "ready", review } }
         : current);
     } catch {
-      setState((current) => current.kind === "ready" && current.scan.scan_id === scanId
+      setState((current) => current.kind === "ready" && shouldApplyReviewerResult(current.scan.scan_id, scanId)
         ? { ...current, reviewer: { kind: "unavailable" } }
         : current);
+    } finally {
+      reviewRequestGuard.current.finish(scanId);
     }
   }
 
-  if (state.kind === "demo-loading") {
-    return <div id="overview" className="mx-auto max-w-7xl px-5 py-12 lg:px-8"><ScanProgress onCancel={() => setState({ kind: "idle" })} /></div>;
+  if (state.kind === "demo-loading" || state.kind === "github-loading") {
+    return <div id="overview" className="mx-auto max-w-7xl px-5 py-12 lg:px-8"><ScanProgress onCancel={() => setState({ kind: "idle" })} source={state.kind === "demo-loading" ? "demo" : "github"} /></div>;
   }
 
   if (state.kind === "ready") {
@@ -162,4 +169,31 @@ export function createGitHubSubmissionGuard(): GitHubSubmissionGuard {
       active = false;
     },
   };
+}
+
+type ReviewRequestGuard = {
+  tryStart: (scanId: string) => boolean;
+  finish: (scanId: string) => void;
+};
+
+export function createReviewRequestGuard(): ReviewRequestGuard {
+  const activeScanIds = new Set<string>();
+  return {
+    tryStart: (scanId) => {
+      if (activeScanIds.has(scanId)) return false;
+      activeScanIds.add(scanId);
+      return true;
+    },
+    finish: (scanId) => {
+      activeScanIds.delete(scanId);
+    },
+  };
+}
+
+export function initialReviewerPanelState(): ReviewerPanelState {
+  return { kind: "loading" };
+}
+
+export function shouldApplyReviewerResult(activeScanId: string, reviewScanId: string): boolean {
+  return activeScanId === reviewScanId;
 }

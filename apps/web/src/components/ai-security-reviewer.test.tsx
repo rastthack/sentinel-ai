@@ -31,7 +31,7 @@ const review: AIReviewerResponse = {
     patch_proposals: [{
       language: "TypeScript",
       description: "Scope the lookup.",
-      before: "findUnique({ where: { id } })",
+      before: "<img src=x onerror=alert(1)>",
       after: "findFirst({ where: { id, ownerId } })",
       warning: "Review before applying.",
       is_authoritative: false,
@@ -45,15 +45,18 @@ describe("AISecurityReviewer", () => {
   it("renders the required deterministic-demo review content in collapsible findings", () => {
     const html = renderToStaticMarkup(<AISecurityReviewer onRetry={vi.fn()} state={{ kind: "ready", review }} />);
 
-    for (const label of ["AI Security Reviewer", "AI-generated guidance. Review before applying.", "Deterministic Demo", "Executive Summary", "Overall Risk: high", "Priority Queue", "Root Cause", "Attack Scenario", "Business Impact", "Secure Recommendation", "Patch Proposal", "Evidence Used", "Confidence: high", "Limitations"]) {
+    for (const label of ["AI Security Reviewer", "AI-generated guidance. Review before applying.", "Deterministic Demo", "Executive Summary", "Overall risk: high", "Priority Queue", "Root Cause", "Attack Scenario", "Business Impact", "Secure Recommendation", "Patch Proposal", "Evidence Used", "High confidence", "Limitations"]) {
       expect(html).toContain(label);
     }
     expect(html).toContain("<details");
     expect(html).toContain("AUTH-BOLA-D1D193AD3E");
+    expect(html).toContain("<pre");
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    expect(html).not.toContain("<img src=x onerror=alert(1)>");
   });
 
   it("renders clear loading and unavailable states", () => {
-    expect(renderToStaticMarkup(<AISecurityReviewer onRetry={vi.fn()} state={{ kind: "loading" }} />)).toContain("Preparing bounded security review");
+    expect(renderToStaticMarkup(<AISecurityReviewer onRetry={vi.fn()} state={{ kind: "loading" }} />)).toContain("Generating security review");
     const unavailable = renderToStaticMarkup(<AISecurityReviewer onRetry={vi.fn()} state={{ kind: "unavailable" }} />);
     expect(unavailable).toContain("currently unavailable");
     expect(unavailable).toContain("Retry reviewer");
