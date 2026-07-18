@@ -55,7 +55,7 @@ describe("POST /api/scans/github", () => {
     }));
 
     expect(response.status).toBe(422);
-    expect(response.text()).resolves.not.toContain(localPath);
+    await expect(response.text()).resolves.not.toContain(localPath);
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
