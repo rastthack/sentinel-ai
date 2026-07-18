@@ -58,6 +58,8 @@ export type ScanResponse = {
   ai: AIAnalysis;
 };
 
+export type RepositoryScanResponse = ScanResponse;
+
 export function isScanResponse(value: unknown): value is ScanResponse {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
