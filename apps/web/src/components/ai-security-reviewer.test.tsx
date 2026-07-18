@@ -2,7 +2,29 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { AISecurityReviewer } from "./ai-security-reviewer";
-import type { AIReviewerResponse } from "@/lib/scan-types";
+import type { AIReviewerResponse, Finding } from "@/lib/scan-types";
+
+const deterministicFindings: Finding[] = [{
+  finding_id: "AUTH-BOLA-D1D193AD3E",
+  rule_id: "AUTH-BOLA",
+  title: "Potential BOLA / IDOR",
+  severity: "high",
+  confidence: 0.98,
+  method: "GET",
+  path: "/api/projects/:id",
+  model: "Project",
+  operation: "read_one",
+  ownership_candidate: "ownerId",
+  source_file: "src/routes/projects.ts",
+  line_number: 42,
+  description: "Missing ownership predicate.",
+  evidence: ["Deterministic evidence."],
+  recommendation: "Scope the lookup.",
+  risk_score: 85,
+  risk_components: [],
+  cwe: ["CWE-639"],
+  owasp: ["API1:2023"],
+}];
 
 const review: AIReviewerResponse = {
   status: "complete",
@@ -43,12 +65,13 @@ const review: AIReviewerResponse = {
 
 describe("AISecurityReviewer", () => {
   it("renders the required deterministic-demo review content in collapsible findings", () => {
-    const html = renderToStaticMarkup(<AISecurityReviewer onRetry={vi.fn()} state={{ kind: "ready", review }} />);
+    const html = renderToStaticMarkup(<AISecurityReviewer deterministicFindings={deterministicFindings} onRetry={vi.fn()} state={{ kind: "ready", review }} />);
 
-    for (const label of ["AI Security Reviewer", "AI-generated guidance. Review before applying.", "Deterministic Demo", "Executive Summary", "Overall risk: high", "Priority Queue", "Root Cause", "Attack Scenario", "Business Impact", "Secure Recommendation", "Patch Proposal", "Evidence Used", "High confidence", "Limitations"]) {
+    for (const label of ["Evidence-backed AI Review", "AI Security Reviewer", "AI-generated guidance. Review before applying.", "Deterministic Demo", "Executive Summary", "Overall risk: high", "Priority Queue", "Root Cause", "Attack Scenario", "Business Impact", "Secure Recommendation", "Patch Proposal", "Evidence Used", "High confidence", "Evidence confidence", "98% · Very High", "Limitations"]) {
       expect(html).toContain(label);
     }
     expect(html).toContain("<details");
+    expect(html).toContain("#1");
     expect(html).toContain("AUTH-BOLA-D1D193AD3E");
     expect(html).toContain("<pre");
     expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
@@ -56,8 +79,8 @@ describe("AISecurityReviewer", () => {
   });
 
   it("renders clear loading and unavailable states", () => {
-    expect(renderToStaticMarkup(<AISecurityReviewer onRetry={vi.fn()} state={{ kind: "loading" }} />)).toContain("Generating security review");
-    const unavailable = renderToStaticMarkup(<AISecurityReviewer onRetry={vi.fn()} state={{ kind: "unavailable" }} />);
+    expect(renderToStaticMarkup(<AISecurityReviewer deterministicFindings={deterministicFindings} onRetry={vi.fn()} state={{ kind: "loading" }} />)).toContain("Generating security review");
+    const unavailable = renderToStaticMarkup(<AISecurityReviewer deterministicFindings={deterministicFindings} onRetry={vi.fn()} state={{ kind: "unavailable" }} />);
     expect(unavailable).toContain("currently unavailable");
     expect(unavailable).toContain("Retry reviewer");
   });
