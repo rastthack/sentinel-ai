@@ -33,3 +33,31 @@ class GitHubRepositoryUnavailableError(GitHubAcquisitionError):
 
     code = "github_repository_unavailable"
     public_message = "The repository is unavailable."
+
+
+class GitHubRepositoryTooLargeError(GitHubAcquisitionError):
+    """The repository exceeds the safe metadata-size limit."""
+
+    code = "github_repository_too_large"
+    public_message = "The repository exceeds the maximum supported size."
+
+
+class GitHubRepositoryTooManyFilesError(GitHubAcquisitionError):
+    """The repository exceeds the safe regular-file count limit."""
+
+    code = "github_repository_too_many_files"
+    public_message = "The repository contains too many files to scan safely."
+
+
+class GitHubRepositoryInvalidLayoutError(GitHubAcquisitionError):
+    """The acquired repository root cannot be traversed safely."""
+
+    code = "github_repository_invalid_layout"
+    public_message = "The repository layout cannot be scanned safely."
+
+
+class GitHubRepositoryInspectionError(GitHubAcquisitionError):
+    """Filesystem metadata could not be inspected safely."""
+
+    code = "github_repository_inspection_failed"
+    public_message = "The repository could not be inspected safely."
