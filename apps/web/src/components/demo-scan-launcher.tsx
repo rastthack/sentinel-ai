@@ -6,8 +6,10 @@ import { FindingDetails } from "./finding-details";
 import { FindingsList } from "./findings-list";
 import { ScanProgress } from "./scan-progress";
 import { SecuritySummary } from "./security-summary";
+import { AISecurityReviewer, type ReviewerPanelState } from "./ai-security-reviewer";
 import {
   GitHubScanError,
+  loadAIReviewerReview,
   loadDemoScan,
   scanGitHubRepository,
 } from "../lib/demo-scan-service";
@@ -23,7 +25,7 @@ type State =
   | { kind: "demo-loading" }
   | { kind: "github-loading" }
   | { kind: "error"; message: string; retry: "demo" | "github" }
-  | { kind: "ready"; scan: ScanResponse; selected: Finding | null; source: ScanSource };
+  | { kind: "ready"; scan: ScanResponse; selected: Finding | null; source: ScanSource; reviewer: ReviewerPanelState };
 
 const githubUrlPrefix = "https://github.com/";
 
@@ -33,6 +35,7 @@ export function DemoScanLauncher() {
   const [githubValidationError, setGithubValidationError] = useState<string | null>(null);
   const [githubSubmissionGuard] = useState(createGitHubSubmissionGuard);
   const reviewRef = useRef<HTMLDivElement>(null);
+  const reviewRequestGuard = useRef(createReviewRequestGuard());
   const githubLoading = state.kind === "github-loading";
 
   useEffect(() => {
@@ -57,8 +60,7 @@ export function DemoScanLauncher() {
   async function startDemoScan() {
     setState({ kind: "demo-loading" });
     try {
-      const scan = await loadDemoScan();
-      setState({ kind: "ready", scan, selected: scan.findings[0] ?? null, source: { kind: "demo" } });
+      showScan(await loadDemoScan(), { kind: "demo" });
     } catch {
       setState({
         kind: "error",
@@ -79,13 +81,7 @@ export function DemoScanLauncher() {
     if (!githubSubmissionGuard.tryStart()) return;
     setState({ kind: "github-loading" });
     try {
-      const scan = await scanGitHubRepository(githubUrl);
-      setState({
-        kind: "ready",
-        scan,
-        selected: scan.findings[0] ?? null,
-        source: { kind: "github", githubUrl },
-      });
+      showScan(await scanGitHubRepository(githubUrl), { kind: "github", githubUrl });
     } catch (error) {
       setState({ kind: "error", message: githubErrorMessage(error), retry: "github" });
     } finally {
@@ -93,12 +89,42 @@ export function DemoScanLauncher() {
     }
   }
 
-  if (state.kind === "demo-loading") {
-    return <div id="overview" className="mx-auto max-w-7xl px-5 py-12 lg:px-8"><ScanProgress onCancel={() => setState({ kind: "idle" })} /></div>;
+  function showScan(scan: ScanResponse, source: ScanSource) {
+    setState({
+      kind: "ready",
+      scan,
+      selected: scan.findings[0] ?? null,
+      source,
+      reviewer: initialReviewerPanelState(),
+    });
+    void loadReviewer(scan.scan_id);
+  }
+
+  async function loadReviewer(scanId: string) {
+    if (!reviewRequestGuard.current.tryStart(scanId)) return;
+    setState((current) => current.kind === "ready" && current.scan.scan_id === scanId
+      ? { ...current, reviewer: { kind: "loading" } }
+      : current);
+    try {
+      const review = await loadAIReviewerReview(scanId);
+      setState((current) => current.kind === "ready" && shouldApplyReviewerResult(current.scan.scan_id, scanId)
+        ? { ...current, reviewer: { kind: "ready", review } }
+        : current);
+    } catch {
+      setState((current) => current.kind === "ready" && shouldApplyReviewerResult(current.scan.scan_id, scanId)
+        ? { ...current, reviewer: { kind: "unavailable" } }
+        : current);
+    } finally {
+      reviewRequestGuard.current.finish(scanId);
+    }
+  }
+
+  if (state.kind === "demo-loading" || state.kind === "github-loading") {
+    return <div id="overview" className="mx-auto max-w-7xl px-5 py-12 lg:px-8"><ScanProgress onCancel={() => setState({ kind: "idle" })} source={state.kind === "demo-loading" ? "demo" : "github"} /></div>;
   }
 
   if (state.kind === "ready") {
-    return <div className="mx-auto max-w-7xl px-5 py-12 lg:px-8" ref={reviewRef}><div className="mb-6 flex flex-wrap items-center justify-between gap-4"><p className="text-sm text-slate-400">{state.source.kind === "github" ? <>Public GitHub repository: <span className="font-mono text-slate-200">{state.source.githubUrl}</span></> : "Bundled TaskFlow AI demo"}</p><button className="rounded border border-white/15 px-4 py-2 text-sm text-slate-300" onClick={() => setState({ kind: "idle" })} type="button">Start another scan</button></div><SecuritySummary scan={state.scan} /><FindingsList findings={state.scan.findings} onSelect={(selected) => setState((current) => current.kind === "ready" ? { ...current, selected } : current)} />{state.selected ? <FindingDetails ai={state.scan.ai} finding={state.selected} /> : null}</div>;
+    return <div className="mx-auto max-w-7xl px-5 py-12 lg:px-8" ref={reviewRef}><div className="mb-6 flex flex-wrap items-center justify-between gap-4"><p className="text-sm text-slate-400">{state.source.kind === "github" ? <>Public GitHub repository: <span className="font-mono text-slate-200">{state.source.githubUrl}</span></> : "Bundled TaskFlow AI demo"}</p><button className="rounded border border-white/15 px-4 py-2 text-sm text-slate-300" onClick={() => setState({ kind: "idle" })} type="button">Start another scan</button></div><SecuritySummary scan={state.scan} /><FindingsList findings={state.scan.findings} onSelect={(selected) => setState((current) => current.kind === "ready" ? { ...current, selected } : current)} />{state.selected ? <FindingDetails ai={state.scan.ai} finding={state.selected} /> : null}<AISecurityReviewer onRetry={() => void loadReviewer(state.scan.scan_id)} state={state.reviewer} /></div>;
   }
 
   if (state.kind === "review-empty") {
@@ -143,4 +169,31 @@ export function createGitHubSubmissionGuard(): GitHubSubmissionGuard {
       active = false;
     },
   };
+}
+
+type ReviewRequestGuard = {
+  tryStart: (scanId: string) => boolean;
+  finish: (scanId: string) => void;
+};
+
+export function createReviewRequestGuard(): ReviewRequestGuard {
+  const activeScanIds = new Set<string>();
+  return {
+    tryStart: (scanId) => {
+      if (activeScanIds.has(scanId)) return false;
+      activeScanIds.add(scanId);
+      return true;
+    },
+    finish: (scanId) => {
+      activeScanIds.delete(scanId);
+    },
+  };
+}
+
+export function initialReviewerPanelState(): ReviewerPanelState {
+  return { kind: "loading" };
+}
+
+export function shouldApplyReviewerResult(activeScanId: string, reviewScanId: string): boolean {
+  return activeScanId === reviewScanId;
 }

@@ -1,5 +1,11 @@
-const stages = ["Loading repository", "Indexing source files", "Detecting technology", "Discovering routes", "Discovering authentication", "Parsing Prisma models", "Mapping routes to models", "Analyzing authorization", "Preparing AI explanation"];
+const stages = [
+  "Preparing repository",
+  "Running deterministic security checks",
+  "Building evidence package",
+  "Generating security review",
+];
 
-export function ScanProgress({ onCancel }: { onCancel: () => void }) {
-  return <section aria-live="polite" className="rounded-xl border border-emerald-300/20 bg-[#0c141f] p-6"><p className="font-mono text-xs uppercase tracking-[.16em] text-emerald-300">TaskFlow AI · scan in progress</p><h2 className="mt-2 text-2xl font-semibold">Reviewing the bundled repository</h2><p className="mt-2 text-sm text-slate-400">Stages are presented while Sentinel waits for the completed static scan response.</p><ol className="mt-6 grid gap-2 sm:grid-cols-2">{stages.map((stage, index) => <li className={`flex items-center gap-3 rounded border p-3 text-sm ${index === 0 ? "border-emerald-300/30 text-emerald-200" : "border-white/[.08] text-slate-500"}`} key={stage}><span className={`grid size-5 place-items-center rounded-full text-xs ${index === 0 ? "bg-emerald-300 text-slate-950" : "bg-white/[.06]"}`}>{index + 1}</span>{stage}</li>)}</ol><button className="mt-6 rounded border border-white/15 px-4 py-2 text-sm text-slate-300" onClick={onCancel} type="button">Return to overview</button></section>;
+export function ScanProgress({ onCancel, source }: { onCancel: () => void; source: "demo" | "github" }) {
+  const repository = source === "demo" ? "TaskFlow AI demo" : "public GitHub repository";
+  return <section aria-live="polite" className="rounded-xl border border-emerald-300/20 bg-[#0c141f] p-6"><p className="font-mono text-xs uppercase tracking-[.16em] text-emerald-300">Scan in progress</p><h2 className="mt-2 text-2xl font-semibold">Reviewing {repository}</h2><p className="mt-2 text-sm text-slate-400">Sentinel shows workflow stages, not fabricated completion percentages.</p><ol className="mt-6 grid gap-2 sm:grid-cols-2">{stages.map((stage, index) => <li className={`flex items-center gap-3 rounded border p-3 text-sm ${index === 0 ? "border-emerald-300/30 text-emerald-200" : "border-white/[.08] text-slate-500"}`} key={stage}><span className={`grid size-5 place-items-center rounded-full text-xs ${index === 0 ? "bg-emerald-300 text-slate-950" : "bg-white/[.06]"}`}>{index + 1}</span>{stage}</li>)}</ol><button className="mt-6 rounded border border-white/15 px-4 py-2 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-300" onClick={onCancel} type="button">Return to overview</button></section>;
 }

@@ -1,5 +1,7 @@
 import {
+  isAIReviewerResponse,
   isScanResponse,
+  type AIReviewerResponse,
   type RepositoryScanResponse,
   type ScanResponse,
 } from "./scan-types";
@@ -14,6 +16,12 @@ export class GitHubScanError extends Error {
     message: string,
   ) {
     super(message);
+  }
+}
+
+export class ReviewerError extends Error {
+  constructor(readonly status: number) {
+    super("The optional reviewer is currently unavailable.");
   }
 }
 
@@ -52,6 +60,26 @@ export async function scanGitHubRepository(
   } catch (error) {
     if (error instanceof GitHubScanError) throw error;
     throw new GitHubScanError(500, "The repository could not be scanned.");
+  }
+}
+
+export async function loadAIReviewerReview(
+  scanId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<AIReviewerResponse> {
+  try {
+    const response = await fetcher(`/api/scans/${encodeURIComponent(scanId)}/review`, {
+      method: "POST",
+      cache: "no-store",
+    });
+    const payload: unknown = await response.json().catch(() => null);
+    if (!response.ok || !isAIReviewerResponse(payload)) {
+      throw new ReviewerError(response.status);
+    }
+    return payload;
+  } catch (error) {
+    if (error instanceof ReviewerError) throw error;
+    throw new ReviewerError(502);
   }
 }
 
