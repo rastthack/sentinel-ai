@@ -2,11 +2,23 @@ import { describe, expect, it, vi } from "vitest";
 import {
   DemoScanError,
   GitHubScanError,
+  ReviewerError,
+  loadAIReviewerReview,
   loadDemoScan,
   scanGitHubRepository,
 } from "./demo-scan-service";
 
-const payload = { repository: { name: "vulnerable-taskflow" }, summary: {}, technologies: [], analysis_summary: {}, findings: [{ finding_id: "AUTH-BOLA-D1D193AD3E" }], ai: { status: "disabled", results: [], errors: [] } };
+const payload = { scan_id: "scan-123", repository: { name: "vulnerable-taskflow" }, summary: {}, technologies: [], analysis_summary: {}, findings: [{ finding_id: "AUTH-BOLA-D1D193AD3E" }], ai: { status: "disabled", results: [], errors: [] } };
+
+const reviewPayload = {
+  status: "complete",
+  mode: "security_review",
+  model: "sentinel-demo-reviewer",
+  executive_summary: null,
+  prioritized_findings: [],
+  limitations: [],
+  generated_at: "2026-07-18T00:00:00Z",
+};
 
 describe("loadDemoScan", () => {
   it("requests the demo endpoint and preserves the deterministic finding", async () => { const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(payload), { status: 200 })); const result = await loadDemoScan(fetcher); expect(fetcher).toHaveBeenCalledWith("/api/scans/demo", { cache: "no-store" }); expect(result.findings).toHaveLength(1); expect(result.findings[0]?.finding_id).toBe("AUTH-BOLA-D1D193AD3E"); });
@@ -41,6 +53,25 @@ describe("scanGitHubRepository", () => {
     );
     await expect(scanGitHubRepository("https://github.com/owner/repository", vi.fn().mockRejectedValue(new Error("private filesystem detail")))).rejects.toEqual(
       new GitHubScanError(500, "The repository could not be scanned."),
+    );
+  });
+});
+
+describe("loadAIReviewerReview", () => {
+  it("requests the bounded review endpoint for the completed scan", async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(reviewPayload), { status: 200 }));
+
+    await expect(loadAIReviewerReview("scan-123", fetcher)).resolves.toEqual(reviewPayload);
+
+    expect(fetcher).toHaveBeenCalledWith("/api/scans/scan-123/review", {
+      method: "POST",
+      cache: "no-store",
+    });
+  });
+
+  it("does not expose malformed or internal reviewer failures", async () => {
+    await expect(loadAIReviewerReview("scan-123", vi.fn().mockResolvedValue(new Response("/private/error", { status: 502 })))).rejects.toEqual(
+      new ReviewerError(502),
     );
   });
 });
