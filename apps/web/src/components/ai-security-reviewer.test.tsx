@@ -8,6 +8,7 @@ const deterministicFindings: Finding[] = [{
   finding_id: "AUTH-BOLA-D1D193AD3E",
   rule_id: "AUTH-BOLA",
   title: "Potential BOLA / IDOR",
+  category: "authorization",
   severity: "high",
   confidence: 0.98,
   method: "GET",
@@ -83,5 +84,14 @@ describe("AISecurityReviewer", () => {
     const unavailable = renderToStaticMarkup(<AISecurityReviewer deterministicFindings={deterministicFindings} onRetry={vi.fn()} state={{ kind: "unavailable" }} />);
     expect(unavailable).toContain("currently unavailable");
     expect(unavailable).toContain("Retry reviewer");
+  });
+
+  it("explains the bounded reviewer empty state and trust boundary", () => {
+    const html = renderToStaticMarkup(<AISecurityReviewer deterministicFindings={[]} onRetry={vi.fn()} state={{ kind: "empty" }} />);
+
+    expect(html).toContain("No deterministic findings were available for AI review.");
+    expect(html).toContain("only analyzes bounded evidence");
+    expect(html).toContain("never creates security findings independently");
+    expect(html).toContain("Human validation is required before applying remediation.");
   });
 });

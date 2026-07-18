@@ -1,4 +1,4 @@
-import type { ScanResponse, Severity } from "@/lib/scan-types";
+import type { FindingCategory, ScanResponse, Severity } from "@/lib/scan-types";
 
 const severityOrder: Array<{ label: string; value: keyof ScanResponse["summary"]; severity: Severity }> = [
   { label: "Critical", value: "critical_finding_count", severity: "critical" },
@@ -9,10 +9,11 @@ const severityOrder: Array<{ label: string; value: keyof ScanResponse["summary"]
 
 export function SecuritySummary({ scan }: { scan: ScanResponse }) {
   const risk = overallRisk(scan);
+  const categoryCounts = categoryTotals(scan);
   return <section id="review" aria-labelledby="review-title">
     <div className="rounded-2xl border border-white/[.1] bg-[#0c141f]/90 p-5 shadow-2xl shadow-black/10 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-5">
-        <div className="min-w-0"><p className="font-mono text-xs uppercase tracking-[.16em] text-emerald-300">Deterministic security review</p><h2 className="mt-2 break-words text-3xl font-semibold tracking-tight sm:text-4xl" id="review-title">{scan.repository.name}</h2><p className="mt-2 text-sm text-slate-400">Authorization analysis results. These findings are the security record.</p></div>
+        <div className="min-w-0"><p className="font-mono text-xs uppercase tracking-[.16em] text-emerald-300">Repository Summary</p><h2 className="mt-2 break-words text-3xl font-semibold tracking-tight sm:text-4xl" id="review-title">{scan.repository.name}</h2><p className="mt-2 text-sm text-slate-400">Summary of deterministic security analysis for the scanned repository.</p></div>
         <RiskBadge risk={risk} />
       </div>
       <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -27,8 +28,21 @@ export function SecuritySummary({ scan }: { scan: ScanResponse }) {
         <Metric label="Mapped routes" value={scan.summary.mapped_route_count} compact />
       </dl>
       <div className="mt-5 flex flex-wrap items-center gap-2"><span className="font-mono text-xs uppercase tracking-wider text-slate-500">Detected stack</span>{scan.technologies.map((technology) => <span className="max-w-full break-words rounded-full border border-white/[.1] px-2.5 py-1 text-xs text-slate-300" key={technology.name}>{technology.name}</span>)}</div>
+      {categoryCounts.length > 0 ? <div className="mt-5"><p className="font-mono text-xs uppercase tracking-wider text-slate-500">Findings by category</p><ul className="mt-2 flex flex-wrap gap-2">{categoryCounts.map(([category, count]) => <li className="rounded-full border border-white/[.1] px-2.5 py-1 text-xs text-slate-300" key={category}>{categoryLabel(category)}: {count}</li>)}</ul></div> : null}
     </div>
   </section>;
+}
+
+function categoryTotals(scan: ScanResponse): Array<[FindingCategory, number]> {
+  const counts = new Map<FindingCategory, number>();
+  for (const finding of scan.findings) counts.set(finding.category, (counts.get(finding.category) ?? 0) + 1);
+  return [...counts.entries()].sort(([left], [right]) => categoryLabel(left).localeCompare(categoryLabel(right)));
+}
+
+function categoryLabel(category: FindingCategory): string {
+  return {
+    authorization: "Authorization", authentication: "Authentication", secrets: "Secrets", cors: "CORS", jwt: "JWT", rate_limiting: "Rate limiting", redirect: "Redirect", filesystem: "Filesystem", command_execution: "Command execution", file_upload: "File upload",
+  }[category];
 }
 
 function overallRisk(scan: ScanResponse): "critical" | "high" | "medium" | "low" {

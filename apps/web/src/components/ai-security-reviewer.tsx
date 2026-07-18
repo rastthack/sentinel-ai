@@ -4,6 +4,7 @@ import type { AIReviewerResponse, Finding, ReviewerConfidence } from "@/lib/scan
 
 export type ReviewerPanelState =
   | { kind: "loading" }
+  | { kind: "empty" }
   | { kind: "unavailable" }
   | { kind: "ready"; review: AIReviewerResponse };
 
@@ -30,10 +31,16 @@ export function AISecurityReviewer({
       </div>
       <p className="mt-3 text-sm text-amber-100">AI-generated guidance. Review before applying.</p>
       {state.kind === "loading" ? <p aria-live="polite" className="mt-5 text-sm text-violet-100">Generating security review from the completed deterministic evidence package…</p> : null}
+      {state.kind === "empty" ? <EmptyReview /> : null}
       {state.kind === "unavailable" ? <UnavailableReview onRetry={onRetry} /> : null}
       {state.kind === "ready" ? <ReviewContent deterministicFindings={deterministicFindings} review={state.review} /> : null}
+      <footer className="mt-6 border-t border-white/[.08] pt-4 text-xs leading-5 text-slate-500">Deterministic findings are authoritative. AI guidance is advisory. Human validation is required before applying remediation.</footer>
     </section>
   );
+}
+
+function EmptyReview() {
+  return <div className="mt-5 rounded border border-white/10 bg-black/10 p-4 text-sm leading-6 text-slate-300"><p className="font-semibold text-slate-100">No deterministic findings were available for AI review.</p><p className="mt-3">The AI Security Reviewer only analyzes bounded evidence produced by the deterministic scanner.</p><p className="mt-3">AI guidance is advisory and never creates security findings independently. Deterministic analysis remains the authoritative security record.</p></div>;
 }
 
 function UnavailableReview({ onRetry }: { onRetry: () => void }) {

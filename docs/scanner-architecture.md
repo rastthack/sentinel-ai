@@ -91,3 +91,11 @@ Validated responses are cached using a finding ID and prompt hash. The default c
 ## Milestone 7 web presentation
 
 The web application consumes the public scan contract through bundled-demo and public-GitHub proxies. It presents an honest client-side waiting sequence while the non-streaming API request is pending; it does not invent server progress events. Findings, evidence, risk components, and counts are always rendered from the scan response. AI states are displayed as non-authoritative guidance, and patch proposals are text-only, review-required content. Public GitHub acquisition is isolated, shallow, bounded, and never executes repository code. ZIP upload, history, exports, deployment, and automated fix verification are intentionally not part of this architecture.
+
+## Multi-rule deterministic engine
+
+The `scanner.rules` engine adds conservative JavaScript/TypeScript rules for secrets, CORS, JWT configuration, sensitive-route rate limiting, open redirects, request-controlled filesystem access, shell command execution, and multer-style uploads. Each rule defines stable ID, category, severity, CWE/OWASP mappings, supported languages/frameworks, and limitations. Findings reuse the public deterministic finding contract, keep paths relative, bound evidence to one redacted source line, and use stable rule/path/line fingerprints.
+
+Rules require direct structural evidence rather than broad keyword matches. For example, CORS requires wildcard origin plus credentials, redirects require a direct request value at the redirect sink, command execution requires direct request input or shell interpolation at `exec`, and rate-limit findings require a recognized sensitive route with no visible rate-limit signal. New findings are medium or high confidence only. Infrastructure controls, indirect data flow, framework wrappers, and containment helpers can be invisible to this static pass, so absence of a finding is not proof of security.
+
+The bundled TaskFlow application remains a documented single-BOLA demonstration fixture and is excluded from the additional rule families. Separate synthetic fixtures validate the new families without changing TaskFlow's contract.

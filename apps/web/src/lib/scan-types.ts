@@ -1,13 +1,15 @@
 export type Severity = "informational" | "low" | "medium" | "high" | "critical";
+export type FindingCategory = "authorization" | "authentication" | "secrets" | "cors" | "jwt" | "rate_limiting" | "redirect" | "filesystem" | "command_execution" | "file_upload";
 
 export type Finding = {
   finding_id: string;
   rule_id: string;
   title: string;
+  category: FindingCategory;
   severity: Severity;
   confidence: number;
-  method: string;
-  path: string;
+  method?: string | null;
+  path?: string | null;
   model: string | null;
   operation: string | null;
   ownership_candidate: string | null;

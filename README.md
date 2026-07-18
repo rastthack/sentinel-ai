@@ -9,7 +9,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
 
-Sentinel AI combines deterministic authorization analysis with bounded evidence and AI-assisted security guidance to help developers understand vulnerabilities, assess their impact, and review practical remediation—while keeping deterministic findings authoritative.
+Sentinel AI combines conservative deterministic security analysis with bounded evidence and AI-assisted security guidance to help developers understand vulnerabilities, assess their impact, and review practical remediation—while keeping deterministic findings authoritative.
 
 **Demo Video:** _Placeholder — add link_ · **Live Demo:** _Placeholder — add link_ · **Architecture:** [below](#system-architecture) · **License:** _Placeholder — not finalized_
 
@@ -33,10 +33,10 @@ The AI reviewer never invents vulnerabilities. Deterministic scanner findings re
 | AI Security Reviewer | A deterministic demo reviewer that explains existing evidence only; a live provider remains future work. |
 | Risk Prioritization | Stable finding IDs, severity, confidence, risk score, CWE/OWASP references, and a ranked review queue. |
 | Patch Guidance | Review-required, text-only before/after guidance; Sentinel never applies patches automatically. |
-| Responsive Dashboard | Repository summary, deterministic findings, detail tabs, reviewer guidance, search, and severity filtering. |
+| Responsive Dashboard | Repository summary, deterministic findings, detail tabs, reviewer guidance, search, plus severity and category filtering. |
 | Accessibility | Semantic controls, keyboard focus, labelled inputs, readable severity text, and safe wrapping for paths and code. |
 
-The current deterministic scanner focuses on authorization analysis for TypeScript, Express, and Prisma applications. It is not comprehensive OWASP coverage.
+The current deterministic scanner supports conservative, high-confidence JavaScript/TypeScript patterns for route and authentication discovery, Prisma mapping, BOLA/IDOR, hardcoded secrets, CORS, JWT, rate limiting, redirects, filesystem usage, command execution, and file uploads. It is not comprehensive OWASP coverage; SQL injection, XSS, SSRF, and broader OWASP API coverage remain future work.
 
 ## System Architecture
 

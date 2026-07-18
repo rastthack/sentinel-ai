@@ -39,6 +39,7 @@ from sentinel_api.scanner.models import (
     ScanSummary,
 )
 from sentinel_api.scanner.repository_loader import RepositoryLoader, configured_scan_root
+from sentinel_api.scanner.rules import DeterministicRuleEngine
 
 
 class ScanService:
@@ -54,6 +55,7 @@ class ScanService:
         prisma_parser: PrismaSchemaParser,
         route_model_mapper: RouteModelMapper,
         authorization_analyzer: AuthorizationAnalyzer,
+        rule_engine: DeterministicRuleEngine,
         ai_engine: AIExplanationEngine,
         ai_enabled: bool,
     ) -> None:
@@ -65,6 +67,7 @@ class ScanService:
         self.prisma_parser = prisma_parser
         self.route_model_mapper = route_model_mapper
         self.authorization_analyzer = authorization_analyzer
+        self.rule_engine = rule_engine
         self.ai_engine = ai_engine
         self.ai_enabled = ai_enabled
 
@@ -100,8 +103,25 @@ class ScanService:
             data_model,
             mappings,
         )
+        # TaskFlow is a controlled single-vulnerability fixture whose documented
+        # contract is exactly one BOLA finding. Multi-rule fixtures exercise the
+        # broader engine without changing that demo's security narrative.
+        rule_findings = (
+            []
+            if repository.relative_path == "demo/vulnerable-taskflow"
+            else self.rule_engine.analyze(index)
+        )
+        findings = sorted(
+            [*analysis.findings, *rule_findings],
+            key=lambda finding: (
+                finding.severity,
+                finding.rule_id,
+                finding.source_file,
+                finding.finding_id,
+            ),
+        )
         ai = self.ai_engine.explain(
-            analysis.findings,
+            findings,
             routes,
             analysis.graphs,
             enabled=self.ai_enabled if explain is None else explain,
@@ -136,21 +156,13 @@ class ScanService:
                 public_route_count=authentication.public_route_count,
                 prisma_model_count=len(data_model.models),
                 mapped_route_count=len({mapping.route_id for mapping in mappings}),
-                finding_count=len(analysis.findings),
-                critical_finding_count=sum(
-                    finding.severity == "critical" for finding in analysis.findings
-                ),
-                high_finding_count=sum(
-                    finding.severity == "high" for finding in analysis.findings
-                ),
-                medium_finding_count=sum(
-                    finding.severity == "medium" for finding in analysis.findings
-                ),
-                low_finding_count=sum(
-                    finding.severity == "low" for finding in analysis.findings
-                ),
+                finding_count=len(findings),
+                critical_finding_count=sum(finding.severity == "critical" for finding in findings),
+                high_finding_count=sum(finding.severity == "high" for finding in findings),
+                medium_finding_count=sum(finding.severity == "medium" for finding in findings),
+                low_finding_count=sum(finding.severity == "low" for finding in findings),
                 informational_finding_count=sum(
-                    finding.severity == "informational" for finding in analysis.findings
+                    finding.severity == "informational" for finding in findings
                 ),
             ),
             languages=languages,
@@ -163,7 +175,7 @@ class ScanService:
             route_model_mappings=mappings,
             analysis_summary=analysis.summary,
             authorization_graphs=analysis.graphs,
-            findings=analysis.findings,
+            findings=findings,
             ai=ai,
             warnings=[
                 *index.warnings,
@@ -211,6 +223,7 @@ def build_scan_service(
             missing_auth_detector=MissingAuthenticationDetector(),
             risk_scorer=RiskScorer(),
         ),
+        rule_engine=DeterministicRuleEngine(),
         ai_engine=AIExplanationEngine(
             provider=provider,
             cache=cache,

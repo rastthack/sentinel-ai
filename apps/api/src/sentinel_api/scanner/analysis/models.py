@@ -130,7 +130,18 @@ class AuthorizationFinding(BaseModel):
     finding_id: str
     rule_id: str
     title: str
-    category: Literal["authorization", "authentication"]
+    category: Literal[
+        "authorization",
+        "authentication",
+        "secrets",
+        "cors",
+        "jwt",
+        "rate_limiting",
+        "redirect",
+        "filesystem",
+        "command_execution",
+        "file_upload",
+    ]
     severity: Severity
     confidence: float = Field(ge=0, le=1)
     status: FindingStatus
