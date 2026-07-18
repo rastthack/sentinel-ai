@@ -14,15 +14,20 @@ from sentinel_api.github.exceptions import (
 )
 from sentinel_api.github.limits import RepositoryLimitEnforcer
 from sentinel_api.github.service import GitHubScanService
+from sentinel_api.reviewer.evidence import build_security_evidence_package
+from sentinel_api.reviewer.review_models import AIReviewerResponse
+from sentinel_api.reviewer.service import ReviewerService
 from sentinel_api.scanner.exceptions import ScannerError
 from sentinel_api.scanner.models import (
     GitHubRepositoryScanRequest,
     RepositoryScanRequest,
     RepositoryScanResponse,
 )
+from sentinel_api.scanner.scan_store import CompletedScanStore
 from sentinel_api.scanner.service import ScanService, build_scan_service
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
+_completed_scan_store = CompletedScanStore()
 
 
 def get_scan_service() -> ScanService:
@@ -31,6 +36,24 @@ def get_scan_service() -> ScanService:
 
 
 ScanServiceDependency = Annotated[ScanService, Depends(get_scan_service)]
+
+
+def get_completed_scan_store() -> CompletedScanStore:
+    """Return application-owned completed scan state for follow-up review."""
+    return _completed_scan_store
+
+
+CompletedScanStoreDependency = Annotated[
+    CompletedScanStore, Depends(get_completed_scan_store)
+]
+
+
+def get_reviewer_service() -> ReviewerService:
+    """Build the optional reviewer using server-side configuration only."""
+    return ReviewerService()
+
+
+ReviewerServiceDependency = Annotated[ReviewerService, Depends(get_reviewer_service)]
 
 
 def get_github_scan_service() -> GitHubScanService:
@@ -48,21 +71,26 @@ GitHubScanServiceDependency = Annotated[GitHubScanService, Depends(get_github_sc
 def scan_repository(
     request: RepositoryScanRequest,
     service: ScanServiceDependency,
+    store: CompletedScanStoreDependency,
 ) -> RepositoryScanResponse:
     """Statically inspect one repository below the configured scan root."""
-    return _scan_or_error(service, request.repository_path)
+    return store.save(_scan_or_error(service, request.repository_path))
 
 
 @router.get("/demo", response_model=RepositoryScanResponse)
-def scan_demo(service: ScanServiceDependency) -> RepositoryScanResponse:
+def scan_demo(
+    service: ScanServiceDependency,
+    store: CompletedScanStoreDependency,
+) -> RepositoryScanResponse:
     """Statically inspect the bundled TaskFlow AI demo through the shared service."""
-    return _scan_or_error(service, "demo/vulnerable-taskflow")
+    return store.save(_scan_or_error(service, "demo/vulnerable-taskflow"))
 
 
 @router.post("/github", response_model=RepositoryScanResponse)
 async def scan_github_repository(
     request: Request,
     service: GitHubScanServiceDependency,
+    store: CompletedScanStoreDependency,
 ) -> RepositoryScanResponse:
     """Statically scan one validated public GitHub repository URL."""
     try:
@@ -70,7 +98,43 @@ async def scan_github_repository(
         scan_request = GitHubRepositoryScanRequest.model_validate(payload)
     except (ValueError, ValidationError):
         raise _github_http_error(GitHubUrlError(), 422) from None
-    return _github_scan_or_error(service, scan_request.github_url)
+    return store.save(_github_scan_or_error(service, scan_request.github_url))
+
+
+@router.post("/{scan_id}/review", response_model=AIReviewerResponse)
+def review_scan(
+    scan_id: str,
+    store: CompletedScanStoreDependency,
+    reviewer_service: ReviewerServiceDependency,
+) -> AIReviewerResponse:
+    """Return a bounded, non-authoritative review of one completed scan."""
+    scan = store.get(scan_id)
+    if scan is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "scan_not_found", "message": "The requested scan does not exist."},
+        )
+    if not scan.findings:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "review_evidence_unavailable",
+                "message": "The scan has no reviewable deterministic findings.",
+            },
+        )
+
+    evidence = build_security_evidence_package(scan)
+    try:
+        response = reviewer_service.review(evidence)
+        return AIReviewerResponse.from_evidence(response.model_dump(), evidence)
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "code": "reviewer_unavailable",
+                "message": "The optional reviewer is currently unavailable.",
+            },
+        ) from None
 
 
 def _scan_or_error(service: ScanService, repository_path: str) -> RepositoryScanResponse:
