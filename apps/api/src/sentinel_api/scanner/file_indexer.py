@@ -1,6 +1,8 @@
 """Bounded, read-only repository file inventory."""
 
 import os
+import stat
+from collections.abc import Collection
 from pathlib import Path
 
 from sentinel_api.scanner.models import (
@@ -97,13 +99,70 @@ class FileIndexer:
     def __init__(self, limits: IndexLimits | None = None) -> None:
         self.limits = limits or IndexLimits()
 
-    def index(self, repository: LoadedRepository) -> IndexResult:
+    def index(
+        self,
+        repository: LoadedRepository,
+        *,
+        allowed_relative_paths: Collection[Path] | None = None,
+    ) -> IndexResult:
         """Index a repository without following directory or file symlinks."""
         result = IndexResult()
         state = _IndexState()
-        self._walk(repository.root, repository.root, 0, result, state)
+        if allowed_relative_paths is None:
+            self._walk(repository.root, repository.root, 0, result, state)
+        else:
+            self._index_allowed_files(repository, allowed_relative_paths, result, state)
         result.files.sort(key=lambda item: item.relative_path)
         return result
+
+    def _index_allowed_files(
+        self,
+        repository: LoadedRepository,
+        allowed_relative_paths: Collection[Path],
+        result: IndexResult,
+        state: "_IndexState",
+    ) -> None:
+        """Read only a validated, deterministic subset of regular repository files."""
+        allowed_paths = sorted(
+            {self._validate_allowed_path(repository.root, path) for path in allowed_relative_paths},
+            key=lambda path: path.as_posix(),
+        )
+        for relative_path in allowed_paths:
+            if state.file_count >= self.limits.max_file_count:
+                self._warn_once(
+                    result,
+                    state,
+                    "count",
+                    "Maximum file count of "
+                    f"{self.limits.max_file_count} reached; remaining files were skipped",
+                )
+                return
+            path = repository.root / relative_path
+            state.file_count += 1
+            self._index_file(path, relative_path.as_posix(), result, state)
+
+    @staticmethod
+    def _validate_allowed_path(repository_root: Path, relative_path: Path) -> Path:
+        """Return one safe regular path without resolving or reading unapproved files."""
+        if relative_path.is_absolute() or ".." in relative_path.parts or relative_path == Path("."):
+            raise ValueError("Allowed scanner paths must be relative file paths")
+        if relative_path.parts[0] == ".git":
+            raise ValueError("Allowed scanner paths cannot include Git metadata")
+
+        candidate = repository_root / relative_path
+        try:
+            metadata = candidate.lstat()
+        except OSError as error:
+            raise ValueError("Allowed scanner path is unavailable") from error
+        if candidate.is_symlink() or not stat.S_ISREG(metadata.st_mode):
+            raise ValueError("Allowed scanner path must be a regular file")
+        try:
+            resolved = candidate.resolve(strict=True)
+        except OSError as error:
+            raise ValueError("Allowed scanner path is unavailable") from error
+        if not resolved.is_relative_to(repository_root):
+            raise ValueError("Allowed scanner path is outside the repository")
+        return relative_path
 
     def _walk(
         self,

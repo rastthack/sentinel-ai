@@ -61,3 +61,13 @@ class GitHubRepositoryInspectionError(GitHubAcquisitionError):
 
     code = "github_repository_inspection_failed"
     public_message = "The repository could not be inspected safely."
+
+
+class GitHubScanError(RuntimeError):
+    """Base safe failure for GitHub scan orchestration."""
+
+    code = "github_scan_failed"
+    public_message = "The GitHub repository could not be scanned."
+
+    def __init__(self) -> None:
+        super().__init__(self.public_message)
