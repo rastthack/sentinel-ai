@@ -2,14 +2,59 @@
 
 import os
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sentinel_api.github.limits import RepositoryLimits
 
 
 def cors_origins() -> list[str]:
     """Return explicitly configured browser origins."""
     configured = os.getenv("CORS_ORIGINS", "http://localhost:3000")
     return [origin.strip() for origin in configured.split(",") if origin.strip()]
+
+
+def github_workspace_parent() -> Path:
+    """Return the server-configured parent for application-owned GitHub workspaces."""
+    configured = os.getenv("SENTINEL_GITHUB_WORKSPACE_PARENT", "").strip()
+    parent = Path(configured).expanduser() if configured else Path(tempfile.gettempdir())
+    parent.mkdir(parents=True, exist_ok=True)
+    return parent.resolve(strict=True)
+
+
+def github_repository_limits() -> "RepositoryLimits":
+    """Load positive server-controlled GitHub repository metadata limits."""
+    from sentinel_api.github.limits import RepositoryLimits
+
+    try:
+        return RepositoryLimits(
+            max_repository_bytes=_positive_environment_integer(
+                "SENTINEL_GITHUB_MAX_REPOSITORY_BYTES", 50 * 1024 * 1024
+            ),
+            max_file_count=_positive_environment_integer("SENTINEL_GITHUB_MAX_FILE_COUNT", 5_000),
+            max_individual_file_bytes=_positive_environment_integer(
+                "SENTINEL_GITHUB_MAX_INDIVIDUAL_FILE_BYTES", 1 * 1024 * 1024
+            ),
+            max_inspected_bytes=_positive_environment_integer(
+                "SENTINEL_GITHUB_MAX_INSPECTED_BYTES", 20 * 1024 * 1024
+            ),
+        )
+    except ValueError as error:
+        raise ValueError("Invalid GitHub repository limit configuration") from error
+
+
+def _positive_environment_integer(name: str, default: int) -> int:
+    """Read one positive integer from trusted server configuration."""
+    value = os.getenv(name)
+    if value is None:
+        return default
+    parsed = int(value)
+    if parsed <= 0:
+        raise ValueError("Limit must be positive")
+    return parsed
 
 
 @dataclass(frozen=True, slots=True)

@@ -40,6 +40,14 @@ class RepositoryScanRequest(BaseModel):
     repository_path: str = Field(min_length=1, max_length=1_024)
 
 
+class GitHubRepositoryScanRequest(BaseModel):
+    """A public GitHub repository URL, with no local filesystem input."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    github_url: str = Field(min_length=1, max_length=2_048)
+
+
 class RepositoryMetadata(BaseModel):
     """Safe repository identity relative to the allowed scan root."""
 

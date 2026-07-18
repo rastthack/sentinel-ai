@@ -120,7 +120,7 @@
 
 - The bundled TaskFlow AI scan is the only supported product workflow in this milestone.
 - AI guidance remains optional and non-authoritative; generated patches remain review-required text proposals.
-- GitHub cloning, ZIP input, history, exports, automated verification, and deployment are deferred to Milestone 8 or later.
+- Public GitHub cloning is introduced in Milestone 8A; ZIP input, history, exports, automated verification, and deployment remain deferred.
 
 ### Tests run
 

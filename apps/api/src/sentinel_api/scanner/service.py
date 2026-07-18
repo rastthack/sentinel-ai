@@ -1,5 +1,6 @@
 """Shared repository scan orchestration for API and CLI callers."""
 
+from collections.abc import Collection
 from pathlib import Path
 from uuid import uuid4
 
@@ -72,10 +73,14 @@ class ScanService:
         repository_path: str | Path,
         *,
         explain: bool | None = None,
+        allowed_relative_paths: Collection[Path] | None = None,
     ) -> RepositoryScanResponse:
         """Return structured metadata for one allowed local repository."""
         repository = self.loader.load(repository_path)
-        index = self.indexer.index(repository)
+        index = self.indexer.index(
+            repository,
+            allowed_relative_paths=allowed_relative_paths,
+        )
         languages = detect_languages(index.files)
         technologies = self.detector.detect(index)
         entrypoints = detect_entrypoints(index)
