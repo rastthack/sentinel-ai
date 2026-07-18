@@ -1,5 +1,6 @@
 """Tests for application-owned temporary repository workspaces."""
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -66,6 +67,59 @@ def test_cleanup_is_idempotent(tmp_path: Path) -> None:
 
     assert not created_path.exists()
     assert not any(parent.iterdir())
+
+
+def test_missing_workspace_is_treated_as_successfully_cleaned(tmp_path: Path) -> None:
+    parent = tmp_path / "application-workspaces"
+    parent.mkdir()
+    workspace = TemporaryRepositoryWorkspace(parent)
+    workspace.__enter__()
+    created_path = workspace.workspace_path
+    shutil.rmtree(created_path)
+
+    workspace.cleanup()
+
+    with pytest.raises(RuntimeError, match="has not been created"):
+        _ = workspace.workspace_path
+
+
+def test_cleanup_failure_is_sanitized_and_retains_internal_state(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    parent = tmp_path / "application-workspaces"
+    parent.mkdir()
+    workspace = TemporaryRepositoryWorkspace(parent)
+    workspace.__enter__()
+    created_path = workspace.workspace_path
+    repository_path = workspace.repository_path
+
+    def fail_removal(_: Path) -> None:
+        raise PermissionError("private filesystem failure")
+
+    monkeypatch.setattr("sentinel_api.github.workspace.shutil.rmtree", fail_removal)
+
+    with pytest.raises(RuntimeError, match="GitHub workspace cleanup failed") as raised:
+        workspace.cleanup()
+
+    assert str(created_path) not in str(raised.value)
+    assert workspace.workspace_path == created_path
+    assert workspace.repository_path == repository_path
+    monkeypatch.undo()
+    workspace.cleanup()
+
+
+def test_reentering_active_workspace_is_rejected(tmp_path: Path) -> None:
+    parent = tmp_path / "application-workspaces"
+    parent.mkdir()
+    workspace = TemporaryRepositoryWorkspace(parent)
+
+    workspace.__enter__()
+    try:
+        with pytest.raises(RuntimeError, match="GitHub workspace is already active"):
+            workspace.__enter__()
+    finally:
+        workspace.cleanup()
 
 
 def test_generates_distinct_workspace_names(tmp_path: Path) -> None:

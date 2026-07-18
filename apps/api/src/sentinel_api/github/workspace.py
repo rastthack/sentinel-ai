@@ -35,6 +35,8 @@ class TemporaryRepositoryWorkspace:
 
     def __enter__(self) -> "TemporaryRepositoryWorkspace":
         """Create the unique workspace and its empty repository child directory."""
+        if self._workspace_path is not None:
+            raise RuntimeError("GitHub workspace is already active")
         parent = self._parent_dir.expanduser().resolve(strict=True)
         if not parent.is_dir():
             raise RuntimeError("GitHub workspace parent must be a directory")
@@ -69,6 +71,12 @@ class TemporaryRepositoryWorkspace:
         ):
             raise RuntimeError("Refusing to clean an unsafe GitHub workspace path")
 
-        shutil.rmtree(resolved_workspace, ignore_errors=True)
+        try:
+            shutil.rmtree(resolved_workspace)
+        except FileNotFoundError:
+            pass
+        except OSError as error:
+            raise RuntimeError("GitHub workspace cleanup failed") from error
+
         self._workspace_path = None
         self._repository_path = None
