@@ -45,7 +45,25 @@ _SEMANTIC_SECRET_LABELS = frozenset(
         "resetpasswordtoken",
     }
 )
+_DESCRIPTIVE_SECRET_KEY_SUFFIXES = frozenset(
+    {
+        "message",
+        "errormessage",
+        "error",
+        "warning",
+        "label",
+        "title",
+        "description",
+        "helptext",
+        "placeholdertext",
+        "validationmessage",
+        "tooltip",
+        "prompt",
+        "displaytext",
+    }
+)
 _IDENTIFIER_VALUE = re.compile(r"^[A-Za-z0-9_\- ]+$")
+_DESCRIPTIVE_TEXT_VALUE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.,;:!?'-]*$")
 _PRIVATE_KEY_VALUE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", re.I)
 _PROVIDER_TOKEN_VALUE = re.compile(r"(?:sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16})")
 _PASSWORD_ASSIGNMENT = re.compile(
@@ -119,7 +137,16 @@ class _PatternRule:
             if self.secret_assignment and _suppress_secret_assignment(primary):
                 continue
             excerpt = _excerpt(content, primary.start(), redact=self.redact)
-            confidence = _secret_assignment_confidence(path, primary, self.confidence) if self.secret_assignment else self.confidence
+            confidence = (
+                _secret_assignment_confidence(path, primary, self.confidence)
+                if self.secret_assignment
+                else self.confidence
+            )
+            severity = (
+                _secret_assignment_severity(path, primary, self.definition.severity)
+                if self.secret_assignment
+                else self.definition.severity
+            )
             results.append(
                 _finding(
                     self.definition,
@@ -129,6 +156,7 @@ class _PatternRule:
                     excerpt,
                     self.recommendation,
                     confidence,
+                    severity,
                 )
             )
         return results
@@ -442,16 +470,19 @@ def _finding(
     excerpt: str,
     recommendation: str,
     confidence: float,
+    severity: Literal["medium", "high", "critical"] | None = None,
 ) -> AuthorizationFinding:
     line = content.count("\n", 0, offset) + 1
     fingerprint = f"{definition.rule_id}|{path}|{line}"
     identifier = hashlib.sha256(fingerprint.encode()).hexdigest()[:12].upper()
+    finding_severity = severity or definition.severity
+    risk_score = {"medium": 60, "high": 78, "critical": 90}[finding_severity]
     return AuthorizationFinding(
         finding_id=f"{definition.rule_id}-{identifier}",
         rule_id=definition.rule_id,
         title=definition.title,
         category=definition.category,
-        severity=definition.severity,
+        severity=finding_severity,
         confidence=confidence,
         status="open",
         route_id=f"file:{path}",
@@ -467,11 +498,11 @@ def _finding(
         recommendation=recommendation,
         cwe=definition.cwe,
         owasp=definition.owasp_mapping,
-        risk_score={"medium": 60, "high": 78, "critical": 90}[definition.severity],
+        risk_score=risk_score,
         risk_components=[
             RiskScoreComponent(
                 name="structural_rule_evidence",
-                points={"medium": 60, "high": 78, "critical": 90}[definition.severity],
+                points=risk_score,
             )
         ],
     )
@@ -526,6 +557,22 @@ def is_placeholder_secret(value: str) -> bool:
     return normalized_value in {normalize_identifier(item) for item in _PLACEHOLDERS} or "placeholder" in normalized_value
 
 
+def is_descriptive_secret_key(key: str) -> bool:
+    """Identify password or secret keys used solely for user-facing descriptive text."""
+    normalized_key = normalize_identifier(key)
+    return any(normalized_key.endswith(suffix) for suffix in _DESCRIPTIVE_SECRET_KEY_SUFFIXES)
+
+
+def is_descriptive_secret_text(value: str) -> bool:
+    """Accept bounded natural-language or identifier-like text, never credential formats."""
+    return (
+        len(value) <= 200
+        and _DESCRIPTIVE_TEXT_VALUE.fullmatch(value) is not None
+        and not looks_like_strong_secret_format(value)
+        and not looks_high_entropy(value)
+    )
+
+
 def is_test_or_fixture_path(path: str) -> bool:
     """Identify test-like paths without treating their contents as inherently safe."""
     segments = tuple(segment.casefold() for segment in path.replace("\\", "/").split("/"))
@@ -534,7 +581,7 @@ def is_test_or_fixture_path(path: str) -> bool:
 
 def looks_high_entropy(value: str) -> bool:
     """Conservatively identify long mixed-character credentials."""
-    if len(value) < 20 or len(set(value)) < 8:
+    if len(value) < 20 or len(set(value)) < 8 or any(character.isspace() for character in value):
         return False
     character_classes = sum(
         (
@@ -559,6 +606,8 @@ def _suppress_secret_assignment(match: re.Match[str]) -> bool:
         return False
     if is_placeholder_secret(value):
         return True
+    if key is not None and is_descriptive_secret_key(key) and is_descriptive_secret_text(value):
+        return True
     return key is not None and (
         is_semantic_label(key, value) or normalize_identifier(value) in _SEMANTIC_SECRET_LABELS
     )
@@ -574,3 +623,19 @@ def _secret_assignment_confidence(path: str, match: re.Match[str], default_confi
     ):
         return default_confidence
     return min(default_confidence, 0.70)
+
+
+def _secret_assignment_severity(
+    path: str,
+    match: re.Match[str],
+    default_severity: Literal["medium", "high", "critical"],
+) -> Literal["medium", "high", "critical"]:
+    """Keep weak test-only password assignments from driving production risk high."""
+    value = match.group("value")
+    if (
+        not is_test_or_fixture_path(path)
+        or looks_like_strong_secret_format(value)
+        or looks_high_entropy(value)
+    ):
+        return default_severity
+    return "medium"

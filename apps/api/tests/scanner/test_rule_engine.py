@@ -101,6 +101,25 @@ def test_secret_rules_suppress_weak_semantic_labels_in_test_paths() -> None:
     assert [finding for finding in findings if finding.category == "secrets"] == []
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        'const invalidPasswordErrorMessage = "Invalid password";',
+        'const passwordError = "Password is incorrect";',
+        'const passwordLabel = "Enter your password";',
+        'const passwordDescription = "Password must contain 8 characters";',
+        'const secretWarning = "Do not share your secret";',
+        'const passwordValidationMessage = "Password is required";',
+    ],
+)
+def test_secret_rules_suppress_descriptive_password_and_secret_text(source: str) -> None:
+    findings = DeterministicRuleEngine().analyze(
+        IndexResult(contents={"app/routes/session.js": source})
+    )
+
+    assert [finding for finding in findings if finding.rule_id == "SECRET-PASSWORD"] == []
+
+
 def test_secret_rules_lower_confidence_for_weak_generic_test_passwords() -> None:
     findings = DeterministicRuleEngine().analyze(
         IndexResult(contents={"tests/config.test.ts": 'const PASSWORD = "development-password";'})
@@ -109,6 +128,8 @@ def test_secret_rules_lower_confidence_for_weak_generic_test_passwords() -> None
     assert len(findings) == 1
     assert findings[0].rule_id == "SECRET-PASSWORD"
     assert findings[0].confidence == 0.70
+    assert findings[0].severity == "medium"
+    assert findings[0].risk_score == 60
 
 
 @pytest.mark.parametrize(
@@ -122,6 +143,11 @@ def test_secret_rules_lower_confidence_for_weak_generic_test_passwords() -> None
         (
             "src/config/auth.ts",
             'const PASSWORD = "Tr0ub4dor&3-Production-Only";',
+            "SECRET-PASSWORD",
+        ),
+        (
+            "src/config/database.ts",
+            'const databasePassword = "prod-db-password-9382";',
             "SECRET-PASSWORD",
         ),
         (
@@ -147,3 +173,17 @@ def test_secret_rules_preserve_strong_credentials_in_all_supported_paths(
     findings = DeterministicRuleEngine().analyze(IndexResult(contents={path: source}))
 
     assert [finding.rule_id for finding in findings] == [rule_id]
+    assert findings[0].severity == "high"
+
+
+def test_secret_rules_keep_high_entropy_fixture_credentials_high_severity() -> None:
+    findings = DeterministicRuleEngine().analyze(
+        IndexResult(
+            contents={"fixtures/jwt.ts": 'const JWT_SECRET = "p9X2mK7qL4vN8sR1Zc6Yh3Qa";'}
+        )
+    )
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "SECRET-PASSWORD"
+    assert findings[0].confidence == 0.93
+    assert findings[0].severity == "high"
