@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   DemoScanLauncher,
@@ -8,6 +8,7 @@ import {
   githubErrorMessage,
   githubUrlValidationError,
   initialReviewerPanelState,
+  scrollToSection,
   shouldApplyReviewerResult,
 } from "./demo-scan-launcher";
 import { GitHubScanError } from "../lib/demo-scan-service";
@@ -16,16 +17,21 @@ describe("DemoScanLauncher", () => {
   it("renders the public GitHub repository form and preserves the demo action", () => {
     const html = renderToStaticMarkup(<DemoScanLauncher />);
 
-    expect(html).toContain("Public GitHub repository");
+    expect(html).toContain("AI-Assisted Deterministic Security Review");
+    expect(html).toContain("Scan a public GitHub repository using deterministic security rules, then receive bounded, category-aware AI guidance based only on verified evidence.");
+    expect(html).toContain("Scan Public Repository");
+    expect(html).toContain("Public GitHub repository URL");
     expect(html).toContain("Only public GitHub HTTPS repository URLs are supported.");
     expect(html).toContain("https://github.com/owner/repository");
     expect(html).toContain("Scan repository");
-    expect(html).toContain("Run TaskFlow Demo Scan");
-    expect(html).toContain("Focused Authorization Demo");
-    expect(html).toContain("A controlled BOLA and ownership-validation example.");
-    expect(html).toContain("Run Multi-Rule Demo Scan");
-    expect(html).toContain("Expanded Deterministic Security Engine");
-    expect(html).toContain("Controlled examples for secrets, CORS, JWT, redirects, filesystem access, command execution, uploads, and rate limiting.");
+    expect(html).toContain("Run TaskFlow Demo");
+    expect(html).toContain("Authorization-focused controlled demo");
+    expect(html).toContain("A controlled BOLA and ownership-validation example. Fixture code is never executed.");
+    expect(html).toContain("Run Multi-Rule Demo");
+    expect(html).toContain("Multi-rule controlled demo");
+    expect(html).toContain("Fixture code is never executed.");
+    expect(html).toContain("Currently supported deterministic checks");
+    expect(html).toContain("Coverage is intentionally bounded and is not a comprehensive security assessment.");
   });
 
   it("validates only an empty or clearly non-GitHub URL on the client", () => {
@@ -66,5 +72,21 @@ describe("DemoScanLauncher", () => {
     expect(guard.tryStart("scan-456")).toBe(true);
     guard.finish("scan-123");
     expect(guard.tryStart("scan-123")).toBe(true);
+  });
+
+  it("scrolls each navigation destination to its stable section", () => {
+    const scrollIntoView = vi.fn();
+    const getElementById = vi.fn(() => ({ scrollIntoView }));
+    vi.stubGlobal("document", { getElementById });
+
+    scrollToSection("overview");
+    scrollToSection("scan-controls");
+    scrollToSection("architecture");
+
+    expect(getElementById).toHaveBeenNthCalledWith(1, "overview");
+    expect(getElementById).toHaveBeenNthCalledWith(2, "scan-controls");
+    expect(getElementById).toHaveBeenNthCalledWith(3, "architecture");
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    vi.unstubAllGlobals();
   });
 });
