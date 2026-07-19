@@ -11,7 +11,7 @@ from sentinel_api.scanner.rules import DeterministicRuleEngine
     [
         ("SECRET-HARDCODED", 'const key = "-----BEGIN PRIVATE KEY-----\\nsecret";'),
         ("SECRET-TOKEN", 'const token = "sk-abcdefghijklmnopqrstuvwxyz0123456789";'),
-        ("SECRET-PASSWORD", 'const password = "not-a-placeholder-secret";'),
+        ("SECRET-PASSWORD", 'const password = "not-a-real-secret-value";'),
         ("CORS-WILDCARD-CREDENTIALS", 'cors({ origin: "*", credentials: true });'),
         ("JWT-NONE-ALGORITHM", 'jwt.verify(token, key, { algorithms: ["none"] });'),
         ("JWT-VERIFY-DISABLED", "jwt.decode(token, { verify: false });"),
@@ -69,3 +69,81 @@ def test_secret_evidence_is_redacted_and_duplicate_findings_are_collapsed() -> N
 
     assert len([finding for finding in findings if finding.rule_id == "SECRET-TOKEN"]) == 1
     assert secret not in findings[0].evidence[0]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        'const RESET_PASSWORD = "resetPassword";',
+        'const VERIFY_EMAIL = "verifyEmail";',
+        'const ACCESS_TOKEN = "accessToken";',
+        'const REFRESH_TOKEN = "refreshToken";',
+        'const PASSWORD_RESET = "passwordReset";',
+        'const EMAIL_VERIFICATION = "emailVerification";',
+        'const password = "change_me";',
+        'const secret = "replace-with-secret";',
+        'const password = "not-a-placeholder-value";',
+    ],
+)
+def test_secret_rules_suppress_semantic_labels_and_placeholders(source: str) -> None:
+    findings = DeterministicRuleEngine().analyze(
+        IndexResult(contents={"src/config/tokens.js": source})
+    )
+
+    assert [finding for finding in findings if finding.category == "secrets"] == []
+
+
+def test_secret_rules_suppress_weak_semantic_labels_in_test_paths() -> None:
+    findings = DeterministicRuleEngine().analyze(
+        IndexResult(contents={"tests/tokens.test.ts": 'const RESET_PASSWORD = "resetPassword";'})
+    )
+
+    assert [finding for finding in findings if finding.category == "secrets"] == []
+
+
+def test_secret_rules_lower_confidence_for_weak_generic_test_passwords() -> None:
+    findings = DeterministicRuleEngine().analyze(
+        IndexResult(contents={"tests/config.test.ts": 'const PASSWORD = "development-password";'})
+    )
+
+    assert len(findings) == 1
+    assert findings[0].rule_id == "SECRET-PASSWORD"
+    assert findings[0].confidence == 0.70
+
+
+@pytest.mark.parametrize(
+    ("path", "source", "rule_id"),
+    [
+        (
+            "src/config/jwt.ts",
+            'const JWT_SECRET = "p9X2mK7qL4vN8sR1Zc6Yh3Qa";',
+            "SECRET-PASSWORD",
+        ),
+        (
+            "src/config/auth.ts",
+            'const PASSWORD = "Tr0ub4dor&3-Production-Only";',
+            "SECRET-PASSWORD",
+        ),
+        (
+            "src/config/token.ts",
+            'const API_KEY = "sk-proj-abcdefghijklmnopqrstuvwxyz123456";',
+            "SECRET-TOKEN",
+        ),
+        (
+            "src/config/key.ts",
+            'const PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----";',
+            "SECRET-HARDCODED",
+        ),
+        (
+            "fixtures/credentials.ts",
+            'const PASSWORD = "Tr0ub4dor&3-Production-Only";',
+            "SECRET-PASSWORD",
+        ),
+    ],
+)
+def test_secret_rules_preserve_strong_credentials_in_all_supported_paths(
+    path: str, source: str, rule_id: str
+) -> None:
+    findings = DeterministicRuleEngine().analyze(IndexResult(contents={path: source}))
+
+    assert [finding.rule_id for finding in findings] == [rule_id]

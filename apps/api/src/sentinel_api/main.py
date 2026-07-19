@@ -10,6 +10,8 @@ from sentinel_api.config import cors_origins
 from sentinel_api.scanner.routes import router as scanner_router
 from sentinel_api.version import APP_VERSION
 
+__all__ = ["APP_VERSION", "app"]
+
 
 class HealthResponse(BaseModel):
     """Public service health response."""

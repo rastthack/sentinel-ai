@@ -12,7 +12,49 @@ from sentinel_api.scanner.redaction import redact_sensitive_text
 from sentinel_api.scanner.rules.models import RuleCategory, RuleDefinition, SecurityRule
 
 _PLACEHOLDERS = frozenset(
-    {"changeme", "example", "your_api_key", "your-api-key", "placeholder", "test"}
+    {
+        "password",
+        "secret",
+        "changeme",
+        "change_me",
+        "your_password",
+        "your_secret",
+        "example",
+        "example_password",
+        "test",
+        "test123",
+        "dummy",
+        "placeholder",
+        "replace_me",
+        "replace-with-secret",
+        "your_api_key",
+        "your-api-key",
+    }
+)
+_SEMANTIC_SECRET_LABELS = frozenset(
+    {
+        "resetpassword",
+        "passwordreset",
+        "verifyemail",
+        "emailverification",
+        "accesstoken",
+        "refreshtoken",
+        "bearertoken",
+        "authtoken",
+        "verificationtoken",
+        "resetpasswordtoken",
+    }
+)
+_IDENTIFIER_VALUE = re.compile(r"^[A-Za-z0-9_\- ]+$")
+_PRIVATE_KEY_VALUE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", re.I)
+_PROVIDER_TOKEN_VALUE = re.compile(r"(?:sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16})")
+_PASSWORD_ASSIGNMENT = re.compile(
+    r"(?<![\w$-])(?P<key>(?:[A-Za-z_$][\w$-]*)?(?:password|secret)[\w$-]*)\s*[:=]\s*['\"](?P<value>[^'\"]{8,})['\"]",
+    re.I,
+)
+_JWT_SECRET_ARGUMENT = re.compile(
+    r"jwt\.(?:sign|verify)\s*\([^,]+,\s*['\"](?P<value>[^'\"]{8,})['\"]",
+    re.I,
 )
 
 
@@ -45,6 +87,8 @@ class _PatternRule:
         confidence: float,
         redact: bool = False,
         route_sensitive: bool = False,
+        secret_assignment: bool = False,
+        allow_test_or_fixture_paths: bool = False,
     ) -> None:
         self.definition = definition
         self.required_patterns = required_patterns
@@ -54,11 +98,15 @@ class _PatternRule:
         self.confidence = confidence
         self.redact = redact
         self.route_sensitive = route_sensitive
+        self.secret_assignment = secret_assignment
+        self.allow_test_or_fixture_paths = allow_test_or_fixture_paths
 
     def analyze(self, index: IndexResult) -> list[AuthorizationFinding]:
         results: list[AuthorizationFinding] = []
         for path, content in sorted(index.contents.items()):
-            if not _supported(path) or _excluded(path):
+            if not _supported(path) or _excluded(
+                path, allow_test_or_fixture_paths=self.allow_test_or_fixture_paths
+            ):
                 continue
             matches = [pattern.search(content) for pattern in self.required_patterns]
             if not all(matches):
@@ -68,9 +116,10 @@ class _PatternRule:
                 continue
             if self.forbidden_pattern is not None and self.forbidden_pattern.search(content):
                 continue
-            excerpt = _excerpt(content, primary.start(), redact=self.redact)
-            if self.redact and _placeholder_assignment(excerpt):
+            if self.secret_assignment and _suppress_secret_assignment(primary):
                 continue
+            excerpt = _excerpt(content, primary.start(), redact=self.redact)
+            confidence = _secret_assignment_confidence(path, primary, self.confidence) if self.secret_assignment else self.confidence
             results.append(
                 _finding(
                     self.definition,
@@ -79,7 +128,7 @@ class _PatternRule:
                     primary.start(),
                     excerpt,
                     self.recommendation,
-                    self.confidence,
+                    confidence,
                 )
             )
         return results
@@ -166,6 +215,7 @@ def _default_rules() -> list[SecurityRule]:
             recommendation="Move the credential to a server-side secret manager or environment configuration and rotate it.",
             confidence=0.98,
             redact=True,
+            allow_test_or_fixture_paths=True,
         ),
         _PatternRule(
             rule(
@@ -181,6 +231,7 @@ def _default_rules() -> list[SecurityRule]:
             recommendation="Remove and rotate the exposed token; load it from server-side secret configuration.",
             confidence=0.98,
             redact=True,
+            allow_test_or_fixture_paths=True,
         ),
         _PatternRule(
             rule(
@@ -193,14 +244,13 @@ def _default_rules() -> list[SecurityRule]:
                 "Only explicit non-placeholder password or secret assignments are detected.",
             ),
             (
-                re.compile(
-                    r"(?:password|secret)\s*[:=]\s*['\"](?!changeme|example|your_api_key)[^'\"]{8,}['\"]",
-                    re.I,
-                ),
+                _PASSWORD_ASSIGNMENT,
             ),
             recommendation="Move the credential to server-side secret configuration and rotate it.",
             confidence=0.93,
             redact=True,
+            secret_assignment=True,
+            allow_test_or_fixture_paths=True,
         ),
         _PatternRule(
             rule(
@@ -277,14 +327,13 @@ def _default_rules() -> list[SecurityRule]:
                 "Only direct non-placeholder signing or verification secrets are detected.",
             ),
             (
-                re.compile(
-                    r"jwt\.(?:sign|verify)\s*\([^,]+,\s*['\"](?!changeme|example|your_api_key)[^'\"]{8,}['\"]",
-                    re.I,
-                ),
+                _JWT_SECRET_ARGUMENT,
             ),
             recommendation="Load JWT key material from server-side secret configuration and rotate the embedded secret.",
             confidence=0.95,
             redact=True,
+            secret_assignment=True,
+            allow_test_or_fixture_paths=True,
         ),
         _PatternRule(
             rule(
@@ -432,14 +481,15 @@ def _supported(path: str) -> bool:
     return path.endswith((".js", ".jsx", ".ts", ".tsx"))
 
 
-def _excluded(path: str) -> bool:
+def _excluded(path: str, *, allow_test_or_fixture_paths: bool = False) -> bool:
     lower = path.casefold()
+    if allow_test_or_fixture_paths and is_test_or_fixture_path(path):
+        return ".env.example" in lower or "/docs/" in lower or lower.endswith(("lock", ".lock"))
     return (
         ".env.example" in lower
-        or "/test" in lower
+        or is_test_or_fixture_path(path)
         or ".test." in lower
         or ".spec." in lower
-        or "/fixtures/" in lower
         or "/docs/" in lower
         or lower.endswith(("lock", ".lock"))
     )
@@ -454,5 +504,73 @@ def _excerpt(content: str, offset: int, *, redact: bool = False) -> str:
     return bounded or "Structural insecure configuration evidence detected"
 
 
-def _placeholder_assignment(excerpt: str) -> bool:
-    return any(value in excerpt.casefold() for value in _PLACEHOLDERS)
+def normalize_identifier(value: str) -> str:
+    """Normalize source identifiers without interpreting their meaning as instructions."""
+    return "".join(character for character in value.casefold() if character.isalnum())
+
+
+def is_semantic_label(key: str, value: str) -> bool:
+    """Return true for short identifier labels that repeat the assignment key."""
+    return (
+        len(value) <= 64
+        and _IDENTIFIER_VALUE.fullmatch(value) is not None
+        and normalize_identifier(key) == normalize_identifier(value)
+        and not looks_like_strong_secret_format(value)
+        and not looks_high_entropy(value)
+    )
+
+
+def is_placeholder_secret(value: str) -> bool:
+    """Recognize documented placeholders and explicit placeholder-labelled values."""
+    normalized_value = normalize_identifier(value)
+    return normalized_value in {normalize_identifier(item) for item in _PLACEHOLDERS} or "placeholder" in normalized_value
+
+
+def is_test_or_fixture_path(path: str) -> bool:
+    """Identify test-like paths without treating their contents as inherently safe."""
+    segments = tuple(segment.casefold() for segment in path.replace("\\", "/").split("/"))
+    return any(segment in {"test", "tests", "spec", "specs", "fixtures", "examples", "demo"} for segment in segments)
+
+
+def looks_high_entropy(value: str) -> bool:
+    """Conservatively identify long mixed-character credentials."""
+    if len(value) < 20 or len(set(value)) < 8:
+        return False
+    character_classes = sum(
+        (
+            any(character.islower() for character in value),
+            any(character.isupper() for character in value),
+            any(character.isdigit() for character in value),
+            any(not character.isalnum() for character in value),
+        )
+    )
+    return character_classes >= 3
+
+
+def looks_like_strong_secret_format(value: str) -> bool:
+    """Preserve recognized provider credentials and private-key material."""
+    return _PRIVATE_KEY_VALUE.search(value) is not None or _PROVIDER_TOKEN_VALUE.search(value) is not None
+
+
+def _suppress_secret_assignment(match: re.Match[str]) -> bool:
+    value = match.group("value")
+    key = match.groupdict().get("key")
+    if looks_like_strong_secret_format(value) or looks_high_entropy(value):
+        return False
+    if is_placeholder_secret(value):
+        return True
+    return key is not None and (
+        is_semantic_label(key, value) or normalize_identifier(value) in _SEMANTIC_SECRET_LABELS
+    )
+
+
+def _secret_assignment_confidence(path: str, match: re.Match[str], default_confidence: float) -> float:
+    """Lower confidence only for weak generic secret assignments in test-like paths."""
+    value = match.group("value")
+    if (
+        not is_test_or_fixture_path(path)
+        or looks_like_strong_secret_format(value)
+        or looks_high_entropy(value)
+    ):
+        return default_confidence
+    return min(default_confidence, 0.70)
