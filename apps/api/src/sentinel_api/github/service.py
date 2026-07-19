@@ -68,9 +68,22 @@ class GitHubScanService:
                     workspace.workspace_path,
                     _index_limits_for(self._limit_enforcer.limits),
                 )
-                return scanner.scan(
+                response = scanner.scan(
                     workspace.repository_path.name,
                     allowed_relative_paths=[item.relative_path for item in report.eligible_files],
+                )
+                return response.model_copy(
+                    update={
+                        "repository": response.repository.model_copy(
+                            update={
+                                "name": repository_url.repository,
+                                "relative_path": f"github/{repository_url.display_name}",
+                            }
+                        ),
+                        "scan_metadata": response.scan_metadata.model_copy(
+                            update={"branch": acquired.branch}
+                        ),
+                    }
                 )
         except (GitHubAcquisitionError, GitHubScanError, ScannerError):
             raise

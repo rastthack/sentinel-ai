@@ -28,15 +28,15 @@ The AI reviewer never invents vulnerabilities. Deterministic scanner findings re
 
 | Capability | What Sentinel AI provides |
 | --- | --- |
-| Repository Scanning | Bounded static scanning for the bundled demo and validated public HTTPS GitHub repositories; repository code is never executed. |
-| Evidence Package | A capped, sanitized `SecurityEvidencePackage` that excludes environment files, secrets, Git metadata, lockfiles, binaries, and unsupported content. |
-| AI Security Reviewer | A deterministic demo reviewer that explains existing evidence only; a live provider remains future work. |
+| Repository Scanning | Bounded static scanning for bundled demos and validated public HTTPS GitHub repositories; clones are shallow, resource-limited, and repository code is never executed. |
+| Evidence Package | A capped, sanitized `SecurityEvidencePackage` that excludes environment files, Git metadata, lockfiles, binaries, and unsupported content; detected secret values are redacted. |
+| AI Security Reviewer | A deterministic demo reviewer with category-aware advisory guidance for existing evidence only; a live provider remains future work. |
 | Risk Prioritization | Stable finding IDs, severity, confidence, risk score, CWE/OWASP references, and a ranked review queue. |
 | Patch Guidance | Review-required, text-only before/after guidance; Sentinel never applies patches automatically. |
 | Responsive Dashboard | Repository summary, deterministic findings, detail tabs, reviewer guidance, search, plus severity and category filtering. |
 | Accessibility | Semantic controls, keyboard focus, labelled inputs, readable severity text, and safe wrapping for paths and code. |
 
-The current deterministic scanner supports conservative, high-confidence JavaScript/TypeScript patterns for route and authentication discovery, Prisma mapping, BOLA/IDOR, hardcoded secrets, CORS, JWT, rate limiting, redirects, filesystem usage, command execution, and file uploads. It is not comprehensive OWASP coverage; SQL injection, XSS, SSRF, and broader OWASP API coverage remain future work.
+The current deterministic scanner supports conservative, high-confidence JavaScript/TypeScript patterns for route and authentication discovery, Prisma mapping, BOLA/IDOR, hardcoded secrets, CORS, JWT, rate limiting, redirects, filesystem usage, command execution, and file uploads. Route counts represent only patterns Sentinel currently recognizes, not complete application route coverage. It is not comprehensive OWASP coverage; SQL injection, XSS, SSRF, and broader OWASP API coverage remain future work.
 
 ## System Architecture
 
@@ -88,6 +88,8 @@ The UI presents workflow stages rather than fabricated backend progress percenta
 | Human Validation | Reviews context and decides whether remediation is appropriate | Final decision |
 
 AI guidance is advisory. Scanner findings remain authoritative. Sentinel does not execute repository code or apply changes.
+
+Public GitHub acquisition accepts only validated HTTPS GitHub repository URLs, uses a shallow clone without submodules, and enforces bounded download time and repository limits. Large repositories may exceed those limits. Sentinel does not install dependencies, execute code, or confirm exploitation.
 
 ## Screenshots
 

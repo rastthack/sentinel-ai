@@ -17,7 +17,13 @@ export function FindingsList({ findings, onSelect }: { findings: Finding[]; onSe
 
 export function filterFindings(findings: Finding[], query: string, severity: Severity | "all", category: FindingCategory | "all"): Finding[] { return findings.filter((finding) => (severity === "all" || finding.severity === severity) && (category === "all" || finding.category === category) && searchable(finding).includes(query.toLowerCase())); }
 function searchable(finding: Finding): string { return [finding.rule_id, finding.title, finding.category, finding.source_file, finding.path ?? ""].join(" ").toLowerCase(); }
-function locationFor(finding: Finding): string { return finding.path ? `${finding.method ?? ""} ${finding.path}`.trim() : `${finding.source_file}:${finding.line_number}`; }
+export function locationFor(finding: Finding): string {
+  if (finding.method && finding.path) return `${finding.method} ${finding.path}`;
+  if (finding.category === "cors") return "Application middleware";
+  if (["secrets", "jwt"].includes(finding.category)) return "Repository configuration";
+  if (finding.source_file) return "Source file";
+  return "Unknown location";
+}
 
 function EmptyFindings() { return <div className="mt-5 rounded-xl border border-emerald-300/20 bg-emerald-300/[.04] p-5 text-sm text-slate-300"><p className="font-semibold text-emerald-100">✓ Scan completed successfully</p><p className="mt-3">No issues matching Sentinel AI&apos;s currently supported deterministic rules were detected.</p><p className="mt-4 text-slate-400">This does not imply that the repository is free of vulnerabilities. Coverage is limited to supported frameworks and direct high-confidence patterns.</p></div>; }
 

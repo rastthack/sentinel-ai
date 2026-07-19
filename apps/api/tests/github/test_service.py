@@ -20,6 +20,9 @@ from sentinel_api.github.models import AcquiredRepository, GitHubRepositoryUrl
 from sentinel_api.github.service import GitHubScanService
 from sentinel_api.github.workspace import TemporaryRepositoryWorkspace
 from sentinel_api.scanner.models import IndexLimits, RepositoryScanResponse
+from sentinel_api.scanner.service import build_scan_service
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
 
 
 class RecordingAcquirer:
@@ -81,7 +84,9 @@ class RecordingScanner:
 
 def test_scan_validates_acquires_limits_and_scans_only_eligible_files(tmp_path: Path) -> None:
     events: list[str] = []
-    response = cast(RepositoryScanResponse, object())
+    response = build_scan_service(REPOSITORY_ROOT, ai_enabled=False).scan(
+        "demo/vulnerable-taskflow"
+    )
     acquirer = RecordingAcquirer(events)
     limits = RepositoryLimits(max_individual_file_bytes=4)
     enforcer = RecordingLimitEnforcer(events, limits)
@@ -100,7 +105,10 @@ def test_scan_validates_acquires_limits_and_scans_only_eligible_files(tmp_path: 
         workspace_factory=lambda: TemporaryRepositoryWorkspace(tmp_path),
     )
 
-    assert service.scan_repository_url("https://github.com/owner/repository") is response
+    result = service.scan_repository_url("https://github.com/owner/repository")
+    assert result.repository.name == "repository"
+    assert result.repository.relative_path == "github/owner/repository"
+    assert result.scan_metadata.branch is None
     assert events == ["acquire", "limits", "scan"]
     assert acquirer.repository_url is not None
     assert acquirer.repository_url.normalized_url == "https://github.com/owner/repository.git"

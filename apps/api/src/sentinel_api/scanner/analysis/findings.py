@@ -452,7 +452,7 @@ def _finding_sort_key(finding: AuthorizationFinding) -> tuple[int, str, str, str
     return (
         _SEVERITY_ORDER[finding.severity],
         finding.rule_id,
-        finding.path,
+        finding.path or "",
         finding.model or "",
         finding.finding_id,
     )

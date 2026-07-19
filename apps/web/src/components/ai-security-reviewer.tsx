@@ -99,7 +99,7 @@ function RiskBadge({ risk }: { risk: ReviewerConfidence }) {
 
 function ReviewerFacts({ finding, deterministicFinding }: { finding: AIReviewerResponse["prioritized_findings"][number]; deterministicFinding: Finding | undefined }) {
   const facts = [["Root Cause", finding.root_cause], ["Attack Scenario", finding.attack_scenario], ["Business Impact", finding.business_impact], ["Secure Recommendation", finding.secure_recommendation]];
-  return <div className="mt-5 space-y-4">{deterministicFinding ? <EvidenceConfidence confidence={deterministicFinding.confidence} /> : null}{facts.map(([label, value]) => <div key={label}><h4 className="font-mono text-xs uppercase tracking-wider text-slate-500">{label}</h4><p className="mt-1 break-words">{value}</p></div>)}<PatchProposals proposals={finding.patch_proposals} /><EvidenceUsed references={finding.evidence_references} /></div>;
+  return <div className="mt-5 space-y-4">{deterministicFinding ? <EvidenceConfidence confidence={deterministicFinding.confidence} /> : null}{facts.map(([label, value]) => <div key={label}><h4 className="font-mono text-xs uppercase tracking-wider text-slate-500">{label}</h4><p className="mt-1 break-words">{value}</p></div>)}{finding.verification_guidance?.length ? <div><h4 className="font-mono text-xs uppercase tracking-wider text-slate-500">Verification Guidance</h4><ul className="mt-1 list-disc space-y-1 pl-5">{finding.verification_guidance.map((item) => <li className="break-words" key={item}>{item}</li>)}</ul></div> : null}<PatchProposals proposals={finding.patch_proposals} /><EvidenceUsed references={finding.evidence_references} /></div>;
 }
 
 function EvidenceConfidence({ confidence }: { confidence: number }) {

@@ -2,6 +2,7 @@
 
 from collections.abc import Collection
 from pathlib import Path
+from time import perf_counter
 from uuid import uuid4
 
 from sentinel_api.config import _default_cache_path, ai_settings
@@ -36,10 +37,12 @@ from sentinel_api.scanner.models import (
     IndexLimits,
     RepositoryMetadata,
     RepositoryScanResponse,
+    ScanMetadata,
     ScanSummary,
 )
 from sentinel_api.scanner.repository_loader import RepositoryLoader, configured_scan_root
 from sentinel_api.scanner.rules import DeterministicRuleEngine
+from sentinel_api.version import SCANNER_VERSION
 
 
 class ScanService:
@@ -79,6 +82,7 @@ class ScanService:
         allowed_relative_paths: Collection[Path] | None = None,
     ) -> RepositoryScanResponse:
         """Return structured metadata for one allowed local repository."""
+        started_at = perf_counter()
         repository = self.loader.load(repository_path)
         index = self.indexer.index(
             repository,
@@ -141,6 +145,11 @@ class ScanService:
             repository=RepositoryMetadata(
                 name=repository.name,
                 relative_path=repository.relative_path,
+            ),
+            scan_metadata=ScanMetadata(
+                branch=_local_branch(repository.root, repository.relative_path),
+                deterministic_scan_duration_ms=max(0, int((perf_counter() - started_at) * 1000)),
+                scanner_version=SCANNER_VERSION,
             ),
             summary=ScanSummary(
                 primary_language=languages[0].name if languages else None,
@@ -240,3 +249,18 @@ def _is_within(candidate: Path, parent: Path) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _local_branch(root: Path, relative_path: str) -> str | None:
+    """Return a safe local branch name when it is available without invoking Git."""
+    if relative_path.startswith("demo/"):
+        return "bundled fixture"
+    try:
+        head = (root / ".git" / "HEAD").read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    prefix = "ref: refs/heads/"
+    branch = head.removeprefix(prefix) if head.startswith(prefix) else ""
+    if not branch or any(character.isspace() for character in branch) or ".." in branch:
+        return None
+    return branch

@@ -37,11 +37,15 @@ class EvidenceFinding(BaseModel):
     finding_id: str
     rule_id: str
     title: str
+    category: Literal[
+        "authorization", "authentication", "secrets", "cors", "jwt", "rate_limiting",
+        "redirect", "filesystem", "command_execution", "file_upload",
+    ]
     severity: str
     confidence: float = Field(ge=0, le=1)
     route_id: str
-    method: str
-    path: str
+    method: str | None
+    path: str | None
     model: str | None
     operation: str
     ownership_candidate: str | None

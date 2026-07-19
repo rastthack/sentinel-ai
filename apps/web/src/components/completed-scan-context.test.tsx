@@ -36,7 +36,7 @@ describe("completed scan context", () => {
     for (const stage of ["Repository", "Discovery", "Deterministic Analysis", "Evidence Package", "AI Security Review"]) {
       expect(pipeline).toContain(stage);
     }
-    for (const field of ["Scan Metadata", "repository-with-a-very-long-name", "Express", "ORM", "Unknown", "Routes analyzed", "Protected routes"]) {
+    for (const field of ["Scan Metadata", "repository-with-a-very-long-name", "Express", "ORM", "Unknown", "Routes detected by supported patterns", "Protected routes"]) {
       expect(metadata).toContain(field);
     }
   });

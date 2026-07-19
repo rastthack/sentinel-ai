@@ -92,6 +92,7 @@ class PrioritizedFinding(BaseModel):
     attack_scenario: str = Field(min_length=1, max_length=2_000)
     business_impact: str = Field(min_length=1, max_length=2_000)
     secure_recommendation: str = Field(min_length=1, max_length=2_000)
+    verification_guidance: list[str] = Field(default_factory=list, max_length=10)
     evidence_references: list[EvidenceReference] = Field(min_length=1, max_length=20)
     patch_proposals: list[PatchProposal] = Field(default_factory=list, max_length=5)
 

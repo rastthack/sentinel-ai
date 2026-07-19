@@ -28,7 +28,9 @@ describe("multi-rule findings UI", () => {
     const html = renderToStaticMarkup(<FindingsList findings={findings} onSelect={vi.fn()} />);
     for (const category of ["Secrets", "CORS", "Command Execution", "File Upload"]) expect(html).toContain(category);
     expect(html).toContain("Filter category");
-    expect(html).toContain("src/config.ts:12");
+    expect(html).toContain("Repository configuration");
+    expect(html).toContain("Application middleware");
+    expect(html).toContain("Source file");
 
     const detail = renderToStaticMarkup(<FindingDetails ai={disabledAI} finding={findings[0]!} />);
     expect(detail).toContain("Secrets");

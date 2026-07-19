@@ -146,8 +146,8 @@ class AuthorizationFinding(BaseModel):
     confidence: float = Field(ge=0, le=1)
     status: FindingStatus
     route_id: str
-    method: str
-    path: str
+    method: str | None
+    path: str | None
     model: str | None
     operation: MappingOperation
     ownership_candidate: str | None

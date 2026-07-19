@@ -38,6 +38,8 @@ def parse_public_github_repository_url(value: str) -> GitHubRepositoryUrl:
         raise GitHubUrlError()
 
     segments = parsed.path.split("/")
+    if len(segments) == 4 and segments[-1] == "":
+        segments = segments[:-1]
     if len(segments) != 3 or segments[0] != "" or not segments[1] or not segments[2]:
         raise GitHubUrlError()
 

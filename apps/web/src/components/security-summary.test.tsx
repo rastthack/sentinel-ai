@@ -29,7 +29,7 @@ describe("SecuritySummary", () => {
   it("renders the prominent overall risk badge and core deterministic metrics", () => {
     const html = renderToStaticMarkup(<SecuritySummary scan={scan} />);
 
-    for (const label of ["Repository Summary", "taskflow-ai", "Summary of deterministic security analysis for the scanned repository.", "Overall risk: high", "Total findings", "Critical", "High", "Medium", "Low", "Routes analyzed", "Protected routes", "Public routes", "Prisma models", "Mapped routes"]) {
+    for (const label of ["Repository Summary", "taskflow-ai", "Summary of deterministic security analysis for the scanned repository.", "Overall risk: high", "Total findings", "Critical", "High", "Medium", "Low", "Routes detected", "Protected routes", "Public routes", "Prisma models", "Mapped routes", "Routes detected by supported patterns only"]) {
       expect(html).toContain(label);
     }
   });

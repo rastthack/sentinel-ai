@@ -8,6 +8,7 @@ from typing import Literal
 
 from sentinel_api.scanner.analysis.models import AuthorizationFinding, RiskScoreComponent
 from sentinel_api.scanner.models import IndexResult
+from sentinel_api.scanner.redaction import redact_sensitive_text
 from sentinel_api.scanner.rules.models import RuleCategory, RuleDefinition, SecurityRule
 
 _PLACEHOLDERS = frozenset(
@@ -405,8 +406,8 @@ def _finding(
         confidence=confidence,
         status="open",
         route_id=f"file:{path}",
-        method="GET",
-        path="(repository configuration)",
+        method=None,
+        path=None,
         model=None,
         operation="unknown",
         ownership_candidate=None,
@@ -448,8 +449,8 @@ def _excerpt(content: str, offset: int, *, redact: bool = False) -> str:
     line = content.splitlines()[content.count("\n", 0, offset)] if content.splitlines() else ""
     bounded = line.strip()[:300]
     if redact:
-        bounded = re.sub(r"(['\"])[^'\"]{8,}\1", "<redacted>", bounded)
-        bounded = re.sub(r"(?:sk-[A-Za-z0-9_-]+|AKIA[0-9A-Z]{16})", "<redacted>", bounded)
+        bounded = redact_sensitive_text(bounded).replace("[REDACTED_API_KEY]", "<redacted>")
+        bounded = bounded.replace("[REDACTED]", "<redacted>")
     return bounded or "Structural insecure configuration evidence detected"
 
 

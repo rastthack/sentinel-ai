@@ -23,6 +23,21 @@ def test_accepts_git_suffix_and_keeps_one_suffix_normalized() -> None:
 
 
 @pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("https://github.com/owner/lowercase", "lowercase"),
+        ("https://github.com/OWASP/NodeGoat.git", "NodeGoat"),
+        ("https://github.com/OWASP/NodeGoat/", "NodeGoat"),
+    ],
+)
+def test_preserves_safe_repository_name_from_supported_url(value: str, expected: str) -> None:
+    repository = parse_public_github_repository_url(value)
+
+    assert repository.repository == expected
+    assert repository.display_name.endswith(expected)
+
+
+@pytest.mark.parametrize(
     "value",
     [
         "http://github.com/owner/repository",

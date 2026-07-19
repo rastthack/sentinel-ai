@@ -57,6 +57,16 @@ class RepositoryMetadata(BaseModel):
     relative_path: str
 
 
+class ScanMetadata(BaseModel):
+    """Reliable scan facts without local workspace information."""
+
+    model_config = ConfigDict(frozen=True)
+
+    branch: str | None = None
+    deterministic_scan_duration_ms: int = Field(ge=0)
+    scanner_version: str
+
+
 class IndexedFile(BaseModel):
     """Metadata about one repository file, never its contents."""
 
@@ -134,6 +144,7 @@ class RepositoryScanResponse(BaseModel):
 
     scan_id: str
     repository: RepositoryMetadata
+    scan_metadata: ScanMetadata
     summary: ScanSummary
     languages: list[LanguageStat]
     technologies: list[TechnologyDetection]

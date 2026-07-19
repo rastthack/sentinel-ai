@@ -31,6 +31,9 @@ def test_bundled_taskflow_scan_succeeds() -> None:
 
     assert response.repository.name == "vulnerable-taskflow"
     assert response.repository.relative_path == "demo/vulnerable-taskflow"
+    assert response.scan_metadata.branch == "bundled fixture"
+    assert response.scan_metadata.deterministic_scan_duration_ms >= 0
+    assert response.scan_metadata.scanner_version == "0.1.0"
     assert response.summary.primary_language == "TypeScript"
     assert "Express" in response.summary.frameworks
     assert response.summary.package_manager == "npm"
@@ -112,6 +115,9 @@ def test_demo_api_response_is_safe(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert response.status_code == 200
     assert payload["repository"]["relative_path"] == "demo/vulnerable-taskflow"
+    assert payload["scan_metadata"]["branch"] == "bundled fixture"
+    assert payload["scan_metadata"]["deterministic_scan_duration_ms"] >= 0
+    assert payload["scan_metadata"]["scanner_version"] == "0.1.0"
     assert payload["analysis_summary"]["potential_bola_count"] == 1
     assert payload["findings"][0]["rule_id"] == "AUTH-BOLA"
     assert payload["ai"]["status"] == "disabled"
@@ -138,6 +144,8 @@ def test_multirule_demo_api_response_uses_shared_deterministic_scanner(
         "name": "vulnerable-multirule",
         "relative_path": "demo/vulnerable-multirule",
     }
+    assert payload["scan_metadata"]["branch"] == "bundled fixture"
+    assert payload["scan_metadata"]["deterministic_scan_duration_ms"] >= 0
     assert {
         "SECRET-TOKEN",
         "CORS-WILDCARD-CREDENTIALS",

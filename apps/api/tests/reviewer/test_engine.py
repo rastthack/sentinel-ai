@@ -75,6 +75,24 @@ def test_demo_reviewer_text_is_deterministic(evidence: SecurityEvidencePackage) 
     assert first == second
 
 
+def test_demo_reviewer_uses_category_specific_guidance_and_severity_first_priority() -> None:
+    scan = build_scan_service(REPOSITORY_ROOT, ai_enabled=False).scan("demo/vulnerable-multirule")
+    evidence = build_security_evidence_package(scan)
+
+    response = DemoReviewer().review(evidence)
+
+    assert response.prioritized_findings[0].finding_id.startswith("COMMAND-UNTRUSTED-")
+    command = response.prioritized_findings[0]
+    assert "shell" in command.root_cause.casefold()
+    assert "ownership" not in command.root_cause.casefold()
+    assert command.verification_guidance
+    secret = next(
+        item for item in response.prioritized_findings if item.finding_id.startswith("SECRET-")
+    )
+    assert "credential" in secret.secure_recommendation.casefold()
+    assert "ownership" not in secret.attack_scenario.casefold()
+
+
 def test_service_uses_demo_by_default_and_openai_placeholder_when_configured(
     evidence: SecurityEvidencePackage,
 ) -> None:

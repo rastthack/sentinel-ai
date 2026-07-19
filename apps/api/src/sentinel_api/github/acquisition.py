@@ -67,6 +67,7 @@ class RepositoryAcquirer:
             repository_path=destination,
             display_name=repository.display_name,
             normalized_url=repository.normalized_url,
+            branch=_checked_out_branch(destination),
         )
 
     def _prepare_destination(self, workspace: TemporaryRepositoryWorkspace) -> Path:
@@ -129,3 +130,16 @@ def _is_unavailable(stdout: bytes | None, stderr: bytes | None) -> bool:
     diagnostics = (stdout or b"") + b"\n" + (stderr or b"")
     lowered = diagnostics.lower()
     return any(marker in lowered for marker in _UNAVAILABLE_MARKERS)
+
+
+def _checked_out_branch(destination: Path) -> str | None:
+    """Read the shallow checkout's symbolic HEAD without invoking repository code."""
+    try:
+        head = (destination / ".git" / "HEAD").read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    prefix = "ref: refs/heads/"
+    branch = head.removeprefix(prefix) if head.startswith(prefix) else ""
+    if not branch or any(character.isspace() for character in branch) or ".." in branch:
+        return None
+    return branch

@@ -8,8 +8,7 @@ from pydantic import BaseModel, ConfigDict
 
 from sentinel_api.config import cors_origins
 from sentinel_api.scanner.routes import router as scanner_router
-
-APP_VERSION = "0.1.0"
+from sentinel_api.version import APP_VERSION
 
 
 class HealthResponse(BaseModel):

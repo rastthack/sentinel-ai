@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import ValidationError
 
-from sentinel_api.config import github_repository_limits
+from sentinel_api.config import github_clone_timeout_seconds, github_repository_limits
 from sentinel_api.github.acquisition import RepositoryAcquirer
 from sentinel_api.github.exceptions import (
     GitHubAcquisitionError,
@@ -59,7 +59,7 @@ ReviewerServiceDependency = Annotated[ReviewerService, Depends(get_reviewer_serv
 def get_github_scan_service() -> GitHubScanService:
     """Build a request-scoped GitHub scan service with server-controlled bounds."""
     return GitHubScanService(
-        acquirer=RepositoryAcquirer(clone_timeout_seconds=30.0),
+        acquirer=RepositoryAcquirer(clone_timeout_seconds=github_clone_timeout_seconds()),
         limit_enforcer=RepositoryLimitEnforcer(github_repository_limits()),
     )
 

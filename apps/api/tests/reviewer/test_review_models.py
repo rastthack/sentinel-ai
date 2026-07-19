@@ -45,6 +45,7 @@ def _evidence() -> SecurityEvidencePackage:
                 finding_id=FINDING_ID,
                 rule_id="AUTH-BOLA",
                 title="Potential BOLA / IDOR",
+                category="authorization",
                 severity="high",
                 confidence=0.9,
                 route_id="route:GET:/api/projects/:id",

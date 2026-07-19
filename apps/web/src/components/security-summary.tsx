@@ -21,13 +21,14 @@ export function SecuritySummary({ scan }: { scan: ScanResponse }) {
         {severityOrder.map(({ label, value, severity }) => <Metric key={label} label={label} severity={severity} value={scan.summary[value] as number} />)}
       </div>
       <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/[.08] bg-white/[.08] sm:grid-cols-3 lg:grid-cols-5">
-        <Metric label="Routes analyzed" value={scan.analysis_summary.routes_analyzed} compact />
+        <Metric label="Routes detected" value={scan.analysis_summary.routes_analyzed} compact />
         <Metric label="Protected routes" value={scan.summary.protected_route_count} compact />
         <Metric label="Public routes" value={scan.summary.public_route_count} compact />
         <Metric label="Prisma models" value={scan.summary.prisma_model_count} compact />
         <Metric label="Mapped routes" value={scan.summary.mapped_route_count} compact />
       </dl>
       <div className="mt-5 flex flex-wrap items-center gap-2"><span className="font-mono text-xs uppercase tracking-wider text-slate-500">Detected stack</span>{scan.technologies.map((technology) => <span className="max-w-full break-words rounded-full border border-white/[.1] px-2.5 py-1 text-xs text-slate-300" key={technology.name}>{technology.name}</span>)}</div>
+      <p className="mt-3 text-xs leading-5 text-slate-500">Routes detected by supported patterns only; this is not complete application route coverage.</p>
       {categoryCounts.length > 0 ? <div className="mt-5"><p className="font-mono text-xs uppercase tracking-wider text-slate-500">Findings by category</p><ul className="mt-2 flex flex-wrap gap-2">{categoryCounts.map(([category, count]) => <li className="rounded-full border border-white/[.1] px-2.5 py-1 text-xs text-slate-300" key={category}>{categoryLabel(category)}: {count}</li>)}</ul></div> : null}
     </div>
   </section>;

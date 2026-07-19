@@ -49,6 +49,7 @@ export type AIAnalysis = {
 export type ScanResponse = {
   scan_id: string;
   repository: { name: string };
+  scan_metadata?: { branch: string | null; deterministic_scan_duration_ms: number; scanner_version: string };
   summary: {
     route_count: number; protected_route_count: number; public_route_count: number;
     prisma_model_count: number; mapped_route_count: number; finding_count: number;
@@ -85,6 +86,7 @@ export type AIReviewerResponse = {
     attack_scenario: string;
     business_impact: string;
     secure_recommendation: string;
+    verification_guidance?: string[];
     evidence_references: Array<{
       finding_id: string;
       source_file: string;

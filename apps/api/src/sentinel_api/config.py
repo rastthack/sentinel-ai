@@ -46,6 +46,20 @@ def github_repository_limits() -> "RepositoryLimits":
         raise ValueError("Invalid GitHub repository limit configuration") from error
 
 
+def github_clone_timeout_seconds() -> float:
+    """Return a bounded server-side timeout for shallow public GitHub cloning."""
+    configured = os.getenv("SENTINEL_GITHUB_CLONE_TIMEOUT_SECONDS")
+    if configured is None:
+        return 30.0
+    try:
+        value = float(configured)
+    except ValueError as error:
+        raise ValueError("Invalid GitHub clone timeout configuration") from error
+    if not 10.0 <= value <= 120.0:
+        raise ValueError("GitHub clone timeout must be between 10 and 120 seconds")
+    return value
+
+
 def _positive_environment_integer(name: str, default: int) -> int:
     """Read one positive integer from trusted server configuration."""
     value = os.getenv(name)

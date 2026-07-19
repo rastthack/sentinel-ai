@@ -24,3 +24,4 @@ class AcquiredRepository:
     repository_path: Path
     display_name: str
     normalized_url: str
+    branch: str | None = None

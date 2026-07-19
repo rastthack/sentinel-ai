@@ -18,6 +18,7 @@ from sentinel_api.reviewer.models import (
 )
 from sentinel_api.scanner.analysis.models import AuthorizationFinding
 from sentinel_api.scanner.models import RepositoryScanResponse
+from sentinel_api.scanner.redaction import redact_sensitive_text
 
 MAX_FINDINGS = 20
 MAX_REFERENCED_FILES = 30
@@ -29,15 +30,6 @@ _LOCK_FILES = frozenset(
     {"package-lock.json", "pnpm-lock.yaml", "poetry.lock", "yarn.lock", "pipfile.lock"}
 )
 _ABSOLUTE_PATH = re.compile(r"(?<![\w:])(?:[A-Za-z]:[\\/]|/(?!api(?:/|$)))[^\s\"']+")
-_PRIVATE_KEY = re.compile(
-    r"-----BEGIN [^-\n]*PRIVATE KEY-----.*?-----END [^-\n]*PRIVATE KEY-----", re.S
-)
-_BEARER = re.compile(r"(?i)(\bbearer\s+)[^\s\"']+")
-_DATABASE_URL = re.compile(r"(?i)\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis)://[^\s\"']+")
-_API_KEY = re.compile(r"\b(?:sk-[A-Za-z0-9_-]{12,}|AKIA[0-9A-Z]{16})\b")
-_ASSIGNMENT_SECRET = re.compile(
-    r"(?i)\b((?:api[_-]?key|secret|token|password)\s*[:=]\s*)[^\s\"';,]+"
-)
 
 
 def build_security_evidence_package(
@@ -134,11 +126,12 @@ def _finding_evidence(finding: object, budget: "_EvidenceBudget") -> EvidenceFin
         finding_id=budget.text(finding.finding_id),
         rule_id=budget.text(finding.rule_id),
         title=budget.text(finding.title),
+        category=finding.category,
         severity=finding.severity,
         confidence=finding.confidence,
         route_id=budget.text(finding.route_id),
-        method=budget.text(finding.method),
-        path=budget.literal(finding.path),
+        method=_optional_text(finding.method, budget),
+        path=_optional_literal(finding.path, budget),
         model=_optional_text(finding.model, budget),
         operation=finding.operation,
         ownership_candidate=_optional_text(finding.ownership_candidate, budget),
@@ -265,11 +258,7 @@ def _excerpt(value: str, budget: "_EvidenceBudget") -> tuple[str, bool]:
 
 def _redact(value: str) -> str:
     """Redact common credentials while retaining untrusted text as literal evidence."""
-    value = _PRIVATE_KEY.sub("[REDACTED_PRIVATE_KEY]", value)
-    value = _DATABASE_URL.sub("[REDACTED_DATABASE_URL]", value)
-    value = _BEARER.sub(r"\1[REDACTED_BEARER_TOKEN]", value)
-    value = _API_KEY.sub("[REDACTED_API_KEY]", value)
-    return _ASSIGNMENT_SECRET.sub(r"\1[REDACTED]", value)
+    return redact_sensitive_text(value)
 
 
 def _safe_path(value: str | None) -> str | None:
@@ -289,6 +278,10 @@ def _excluded_path(path: str) -> bool:
 
 def _optional_text(value: str | None, budget: "_EvidenceBudget") -> str | None:
     return budget.text(value) if value is not None else None
+
+
+def _optional_literal(value: str | None, budget: "_EvidenceBudget") -> str | None:
+    return budget.literal(value) if value is not None else None
 
 
 def _severity_rank(value: str) -> int:
