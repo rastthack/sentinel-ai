@@ -1,124 +1,208 @@
 # Sentinel AI
 
-## Evidence-Backed AI Security Reviews
+> **Evidence-Backed AI Security Review Platform**<br>
+> *Find it. Prove it. Fix it. Verify it.*
 
-> **Find it. Prove it. Fix it. Verify it.**
+<p align="center">
+  <img alt="Python 3.12+" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python-009688?logo=fastapi&logoColor=white">
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?logo=next.js">
+  <img alt="GPT-5.6 optional" src="https://img.shields.io/badge/GPT--5.6-optional-412991?logo=openai&logoColor=white">
+  <img alt="Built with Codex" src="https://img.shields.io/badge/Built%20with-Codex-412991?logo=openai&logoColor=white">
+</p>
 
-![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
-![FastAPI](https://img.shields.io/badge/FastAPI-Python-009688?logo=fastapi)
-![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
+<p align="center">
+<img src="Screenshots/landing-page.png" width="95%">
+</p>
 
-Sentinel AI combines conservative deterministic security analysis with bounded evidence and AI-assisted security guidance to help developers understand vulnerabilities, assess their impact, and review practical remediation—while keeping deterministic findings authoritative.
+---
 
-**Demo Video:** _Placeholder — add link_ · **Live Demo:** _Placeholder — add link_ · **Architecture:** [below](#system-architecture) · **License:** _Placeholder — not finalized_
+## Overview
 
-## Why Sentinel AI
+Sentinel AI is a security review platform for AI-generated web applications. It combines deterministic static analysis with bounded evidence and optional GPT-5.6 explanation enrichment to help developers understand verified security findings and review remediation guidance.
 
-Traditional AI reviewers can hallucinate. Traditional static scanners provide limited context. Sentinel AI combines a constrained review workflow:
+Deterministic findings are always the security record. AI can explain existing evidence, summarize risk, and propose review-required guidance, but it never creates, changes, or suppresses deterministic findings.
 
-- **Deterministic findings** establish the security record.
-- **Bounded evidence** provides the facts available to the reviewer.
-- **AI explanations** clarify impact and remediation for existing findings.
-- **Human validation** remains the final decision point.
+---
 
-The AI reviewer never invents vulnerabilities. Deterministic scanner findings remain authoritative.
+## Key Features
 
-## Core Capabilities
+- 🔗 **Safe public-repository acquisition** — validates public HTTPS GitHub URLs, uses a shallow clone in an application-owned temporary workspace, and cleans up after scanning.
+- 🔎 **Deterministic security scanner** — discovers supported routes, authentication signals, Prisma models, ownership controls, and conservative security-rule evidence.
+- 📦 **Bounded evidence package** — redacts sensitive values and constrains the facts exposed to reviewer components.
+- 🤖 **Optional GPT-5.6 explanations** — structured, server-side enrichment for existing deterministic findings when configured.
+- 🧑‍⚖️ **Human-verifiable remediation** — guidance and patch proposals are advisory and require human review.
+- 🧭 **Architecture visibility** — exposes the scanner, evidence, reviewer, and trust-boundary workflow.
+- 📊 **Explainable risk scoring** — stable IDs, severity, confidence, risk components, CWE, and OWASP references travel with each finding.
+- 🛡️ **Static analysis only** — Sentinel never installs dependencies or executes scanned repository code.
+- 🌐 **Public GitHub support** — scans validated public GitHub repositories alongside controlled bundled demos.
 
-| Capability | What Sentinel AI provides |
+---
+
+## Architecture
+
+<p align="center">
+  <img src="Screenshots/architecture_diagram.png" alt="Sentinel AI architecture diagram" width="560">
+</p>
+
+| Component | Responsibility |
 | --- | --- |
-| Repository Scanning | Bounded static scanning for bundled demos and validated public HTTPS GitHub repositories; clones are shallow, resource-limited, and repository code is never executed. |
-| Evidence Package | A capped, sanitized `SecurityEvidencePackage` that excludes environment files, Git metadata, lockfiles, binaries, and unsupported content; detected secret values are redacted. |
-| AI Security Reviewer | A deterministic demo reviewer with category-aware advisory guidance for existing evidence only; a live provider remains future work. |
-| Risk Prioritization | Stable finding IDs, severity, confidence, risk score, CWE/OWASP references, and a ranked review queue. |
-| Patch Guidance | Review-required, text-only before/after guidance; Sentinel never applies patches automatically. |
-| Responsive Dashboard | Repository summary, deterministic findings, detail tabs, reviewer guidance, search, plus severity and category filtering. |
-| Accessibility | Semantic controls, keyboard focus, labelled inputs, readable severity text, and safe wrapping for paths and code. |
+| **Repository acquisition** | Validates public GitHub URLs, performs a non-interactive shallow clone, applies repository limits, and owns temporary cleanup. |
+| **Discovery engine** | Identifies supported frameworks, routes, authentication, Prisma models, and ownership candidates. |
+| **Deterministic scanner** | Emits conservative findings with stable IDs, severity, confidence, risk components, and redacted evidence. |
+| **Evidence package** | Selects bounded, sanitized, relevant scan evidence; it excludes environment files, credentials, Git metadata, lockfiles, binaries, and unsupported content. |
+| **AI layer** | Optionally produces structured explanations for deterministic evidence; it has no authority to alter findings. |
+| **Dashboard** | Presents scan metadata, findings, evidence, review guidance, and review-required remediation. |
 
-The current deterministic scanner supports conservative, high-confidence JavaScript/TypeScript patterns for route and authentication discovery, Prisma mapping, BOLA/IDOR, hardcoded secrets, CORS, JWT, rate limiting, redirects, filesystem usage, command execution, and file uploads. Route counts represent only patterns Sentinel currently recognizes, not complete application route coverage. It is not comprehensive OWASP coverage; SQL injection, XSS, SSRF, and broader OWASP API coverage remain future work.
+Only bounded evidence is eligible for AI enrichment. Repository code is never executed, and deterministic output remains authoritative.
 
-## System Architecture
+---
 
-```text
-GitHub Repository / Bundled Demo
-              │
-              ▼
-     Deterministic Scanner
-              │
-              ▼
-     Bounded Evidence Package
-              │
-              ▼
-          AI Reviewer
-              │
-              ▼
-       Security Review UI
-```
+## Scan Pipeline
 
-Only the bounded evidence package is sent to the AI reviewer, not arbitrary repository context. The scanner response remains the source of truth throughout the flow.
-
-## Security Review Pipeline
+<p align="center">
+  <img src="Screenshots/pipeline_flowchart.png" alt="Sentinel AI scan pipeline" width="420">
+</p>
 
 ```text
 Repository
     ↓
-Static Analysis
+Discovery
     ↓
-Finding Generation
+Deterministic Analysis
     ↓
 Evidence Package
     ↓
-AI Reviewer
+GPT-5.6 Review (optional)
     ↓
-Human Review
-    ↓
-Security Dashboard
+Dashboard
 ```
 
-The UI presents workflow stages rather than fabricated backend progress percentages.
+The interface shows stage-based progress rather than fabricated completion percentages. A failed or unavailable AI request does not invalidate the completed deterministic scan.
 
-## Trust & Security Boundary
+---
 
-| Layer | Responsibility | Authority |
-| --- | --- | --- |
-| Deterministic Scanner | Produces findings, severity, confidence, risk, and evidence | Authoritative |
-| Evidence Package | Bounds and sanitizes facts available to the reviewer | Supporting evidence |
-| AI Reviewer | Explains existing evidence and proposes review-required guidance | Advisory only |
-| Human Validation | Reviews context and decides whether remediation is appropriate | Final decision |
+## Project Structure
 
-AI guidance is advisory. Scanner findings remain authoritative. Sentinel does not execute repository code or apply changes.
+```text
+sentinel-ai/
+├── apps/
+│   ├── api/                    FastAPI service, scanner, GitHub workflow, and reviewer
+│   └── web/                    Next.js dashboard and frontend tests
+├── demo/
+│   ├── vulnerable-taskflow/    Controlled Express/Prisma BOLA demonstration target
+│   └── vulnerable-multirule/   Controlled deterministic-rule fixture
+├── docs/                       Development notes and scanner architecture
+├── rules/                      Deterministic rule assets
+├── scripts/                    Safe development helpers
+├── Screenshots/                Product and architecture screenshots
+├── .env.example                Local server-side configuration template
+├── AGENTS.md                   Contributor and safety guidance
+└── README.md                   Project documentation
+```
 
-Public GitHub acquisition accepts only validated HTTPS GitHub repository URLs, uses a shallow clone without submodules, and enforces bounded download time and repository limits. Large repositories may exceed those limits. Sentinel does not install dependencies, execute code, or confirm exploitation.
+- `apps/api` contains the public API, scanning orchestration, repository acquisition, deterministic rules, and reviewer models.
+- `apps/web` contains the scan launcher, results dashboard, and accessibility-focused frontend.
+- `demo` contains controlled static-analysis targets. They are never executed by Sentinel.
+
+---
+
+## Core Components
+
+| Component | What it does |
+| --- | --- |
+| GitHub Acquisition | Accepts only validated public HTTPS GitHub repository URLs, clones shallowly, disables credential prompts and submodules, enforces limits, and cleans up. |
+| Discovery Engine | Detects supported routes, authentication, Prisma models, route-to-model mappings, and ownership fields. |
+| Deterministic Scanner | Produces conservative security findings from static source evidence. |
+| Evidence Package | Builds bounded, redacted reviewer input without absolute paths or sensitive repository artifacts. |
+| GPT Reviewer | Provides optional structured explanation enrichment for existing evidence; the reviewer panel defaults to a deterministic demo response when no live reviewer is configured. |
+| Dashboard | Renders scan metadata, findings, detail views, risk context, and review guidance without treating AI as authoritative. |
+
+---
+
+## Detection Coverage
+
+### Supported Today
+
+| Area | Current deterministic coverage |
+| --- | --- |
+| Authorization | Route discovery, authentication discovery, Prisma mapping, ownership analysis, and BOLA/IDOR candidates |
+| Secrets | Conservative hardcoded private-key, provider-token, password, and secret assignment detection with deterministic false-positive controls |
+| CORS | Wildcard credentials and direct reflected-origin patterns |
+| JWT | `none` algorithm, disabled verification, hardcoded signing secrets, and unsafe authentication decode patterns |
+| Rate Limiting | Sensitive Express route patterns lacking visible rate limiting |
+| Redirect | Direct request input reaching redirect sinks |
+| Path Traversal | Direct request-controlled values reaching supported filesystem sinks |
+| Command Injection | Direct request input or interpolation reaching `exec`/`execSync` sinks |
+| Unsafe File Upload | Multer-style handlers without visible type and size controls |
+
+### Planned
+
+| Area | Status |
+| --- | --- |
+| SQL Injection | Planned |
+| Cross-Site Scripting (XSS) | Planned |
+| Server-Side Request Forgery (SSRF) | Planned |
+| More OWASP API Top 10 coverage | Planned |
+
+Sentinel’s coverage is intentionally bounded; it is not a comprehensive security assessment or full OWASP scanner.
+
+---
 
 ## Screenshots
 
-Screenshots are intentionally not fabricated. Add project assets here when available.
+### Landing Page
 
-| View | Placeholder |
+![Sentinel AI landing page](Screenshots/landing-page.png)
+
+### Repository Scan
+
+![Public GitHub repository scan](Screenshots/repository-scan.png)
+
+### Repository Summary
+
+![Repository summary](Screenshots/repository-summary.png)
+
+### Security Findings
+
+![Deterministic security findings](Screenshots/findings.png)
+
+### AI Review
+
+![AI review priority queue](Screenshots/ai-review-3.png)
+
+### AI Explanation
+
+![AI review explanation and evidence](Screenshots/ai-review-2.png)
+
+### AI Remediation
+
+![AI review remediation guidance](Screenshots/ai-review.png)
+
+### Architecture Diagram
+
+![Sentinel AI architecture diagram](Screenshots/architecture_diagram.png)
+
+### Pipeline Flow
+
+![Sentinel AI pipeline flow](Screenshots/pipeline_flowchart.png)
+
+---
+
+## Tech Stack
+
+| Category | Technologies |
 | --- | --- |
-| Landing Page | _Add landing page screenshot_ |
-| Repository Summary | _Add repository summary screenshot_ |
-| Security Findings | _Add findings screenshot_ |
-| AI Reviewer | _Add reviewer screenshot_ |
-| Patch Proposal | _Add patch proposal screenshot_ |
-| Trust Boundary | _Add trust-boundary screenshot_ |
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS |
+| Backend | Python 3.12+, FastAPI, Pydantic, Uvicorn |
+| AI | OpenAI SDK, optional GPT-5.6 structured explanation provider, deterministic demo reviewer |
+| Security Analysis | Deterministic Python rules, static source indexing, Express and Prisma discovery |
+| Testing | pytest, Vitest, Supertest, Ruff, mypy, ESLint, TypeScript |
+| Local Development | npm workspaces, Python virtual environment, Docker Compose for the TaskFlow demo |
 
-## Technology Stack
+---
 
-| Area | Technologies |
-| --- | --- |
-| Frontend | Next.js, React, TypeScript, Tailwind CSS |
-| Backend | FastAPI, Pydantic, Python |
-| Testing | Vitest, pytest, Supertest, Ruff, mypy, ESLint, TypeScript |
-| Developer Experience | npm workspaces, Docker for the bundled demo, strict type checking |
-
-## Running Locally
-
-### Prerequisites
-
-- Node.js 22+ and npm 10+
-- Python 3.12+
+## Getting Started
 
 ### Installation
 
@@ -129,125 +213,126 @@ python3 -m venv apps/api/.venv
 apps/api/.venv/bin/python -m pip install -e 'apps/api[dev]'
 ```
 
-### Environment Variables
-
-The checked-in [.env.example](.env.example) documents local development settings.
-
-- `API_URL` is the server-side Next.js-to-FastAPI URL.
-- `CORS_ORIGINS` lists allowed development browser origins.
-- `SENTINEL_SCAN_ROOT` optionally bounds local-path scanner requests.
-- `SENTINEL_AI_ENABLED`, `OPENAI_API_KEY`, and `OPENAI_MODEL` remain server-side only. The current OpenAI reviewer is a safe placeholder; no live model call is implemented.
-
-Never use `NEXT_PUBLIC_` for credentials. Do not commit `.env` files.
-
-### Run Locally
-
-Start the backend and frontend in separate terminals:
+### Run the Backend
 
 ```bash
 npm run dev:api
+```
+
+The FastAPI service runs at [http://localhost:8000](http://localhost:8000).
+
+### Run the Frontend
+
+```bash
 npm run dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000), then select a controlled demo. **Run TaskFlow Demo Scan** is the focused authorization/BOLA validation path. **Run Multi-Rule Demo Scan** validates the expanded deterministic engine against controlled secrets, CORS, JWT, rate-limiting, redirect, filesystem, command-execution, and upload examples. The browser requests the completed scan and then the bounded reviewer response; deterministic findings remain visible if reviewer guidance is unavailable.
+Open [http://localhost:3000](http://localhost:3000).
 
-### Development Workflow
+### Environment Variables
+
+Use [.env.example](.env.example) as the local template.
+
+| Variable | Purpose |
+| --- | --- |
+| `API_URL` | Server-side Next.js-to-FastAPI URL |
+| `CORS_ORIGINS` | Allowed browser origins for local development |
+| `SENTINEL_SCAN_ROOT` | Optional bound for local-path scans |
+| `SENTINEL_AI_ENABLED` | Enables optional server-side AI explanation enrichment |
+| `OPENAI_API_KEY` | Server-side OpenAI credential; never expose through `NEXT_PUBLIC_` |
+| `OPENAI_MODEL` | Optional model override; defaults to the configured GPT-5.6 identifier |
+
+Never commit `.env` files or expose credentials to the browser.
+
+---
+
+## Testing
+
+The backend currently has **214+ passing automated tests**. Run the backend checks from `apps/api`:
 
 ```bash
-# Full repository checks
+.venv/bin/python -m pytest -q
+.venv/bin/python -m ruff check .
+.venv/bin/python -m mypy src tests
+```
+
+Useful repository-wide commands:
+
+```bash
+npm run test
 npm run lint
 npm run typecheck
-npm test
 npm run build
-
-# Frontend checks only
-npm run test --workspace @sentinel/web
-npm run lint --workspace @sentinel/web
-npm run typecheck --workspace @sentinel/web
-npm run build --workspace @sentinel/web
-
-# Backend checks only
-apps/api/.venv/bin/pytest apps/api
-apps/api/.venv/bin/ruff check apps/api
-apps/api/.venv/bin/mypy apps/api/src apps/api/tests
 ```
 
-See [development setup](docs/development.md) for troubleshooting and the controlled TaskFlow demo lifecycle.
+---
 
-## Repository Structure
+## How GPT-5.6 Was Used
 
-```text
-sentinel-ai/
-├── apps/
-│   ├── api/                   FastAPI API, scanner, reviewer, and tests
-│   └── web/                   Next.js dashboard and frontend tests
-├── demo/
-│   ├── vulnerable-taskflow/   Focused authorization/BOLA validation demo
-│   └── vulnerable-multirule/  Controlled deterministic rule-engine fixture
-├── docs/                      Development and scanner architecture notes
-├── rules/                     Deterministic rule assets
-├── scripts/                   Safe automation helpers
-├── .env.example               Local environment template
-└── README.md
-```
+When server-side AI enrichment is enabled, Sentinel uses GPT-5.6 through a structured-output provider to explain deterministic evidence. It supports:
 
-## Security Philosophy
+- evidence-backed risk explanation
+- executive summaries and prioritized review context
+- remediation guidance
+- review-required patch suggestions
+- verification guidance
 
-### Evidence First
+GPT never invents findings. It only receives bounded deterministic evidence and cannot change finding IDs, severity, confidence, risk scoring, or scanner output. The post-scan reviewer interface currently works in deterministic demo mode by default; its separate live reviewer provider remains a placeholder.
 
-Findings are based on deterministic source analysis and structured evidence. Sentinel favors a conservative result over an ungrounded claim.
+---
 
-### AI Second
+## How Codex Was Used
 
-The reviewer assists developers with bounded evidence. It cannot create a vulnerability, change deterministic severity or risk, execute a target, or apply a patch.
+Codex assisted the project through implementation support and iteration, including:
 
-### Human Validation Always
+- repository scaffolding and backend/frontend integration
+- deterministic rule implementation and false-positive refinement
+- automated test generation and maintenance
+- refactoring, bug fixes, and type-checking improvements
+- dashboard and architecture refinement
+- documentation and README improvements
 
-Review patch proposals, preserve authentication and ownership controls, and validate changes in an appropriate controlled environment. AI assists developers; it does not replace deterministic analysis.
+Every Codex-generated change was reviewed before merging. Architecture decisions, security boundaries, and final validation remained under human control.
 
-## Roadmap
+---
 
-- Live OpenAI reviewer integration with structured output validation
-- GitHub App workflow
-- Pull-request comments
+## Limitations
+
+- Static analysis only; Sentinel does not execute repository code.
+- Public HTTPS GitHub repositories only; private repositories are not supported.
+- Bounded deterministic rule coverage; results are not comprehensive OWASP coverage.
+- Repository acquisition and analysis are resource-limited; large repositories may require additional optimization.
+- The project is a prototype and should not be treated as a substitute for a full security assessment.
+- A server-side OpenAI API key is required for optional GPT-5.6 explanation enrichment.
+- The separate live AI reviewer provider is not yet implemented; deterministic demo review remains available.
+
+---
+
+## Future Roadmap
+
+- Incremental and diff-aware scanning
 - SARIF export
-- Multi-repository scanning
-- Additional deterministic scanners and supported frameworks
+- GitHub App workflow
+- CI/CD integration and pull-request feedback
+- VS Code extension
+- Additional OWASP API Top 10 coverage
+- Additional programming languages and frameworks
+- Repository graph analysis
 
-These are future directions, not current product claims.
+---
 
-## Built for OpenAI Build Week
+## Live Demo
 
-GPT-5.5 and Codex assisted with implementation, UI refinement, testing, and documentation. Architecture decisions, security validation, and final review remained under human control.
+| Resource | Status |
+| --- | --- |
+| Backend | Not publicly deployed |
+| Frontend | Not publicly deployed |
+| GitHub | Use this repository’s GitHub page |
 
-## Bundled Demo
+For a local demonstration, run the backend and frontend commands above, then choose **Run TaskFlow Demo** or **Run Multi-Rule Demo** from the dashboard.
 
-[TaskFlow AI](demo/vulnerable-taskflow/README.md) is a separate, realistic Express/TypeScript project-management SaaS application included as Sentinel AI’s controlled demonstration target. It intentionally contains exactly one documented BOLA vulnerability in `GET /api/projects/:id`, which Sentinel identifies through deterministic static analysis.
-
-[Vulnerable Multi-Rule Demo](demo/vulnerable-multirule/README.md) is a separate controlled fixture for validating supported deterministic rule families. It contains synthetic examples only for static inspection; it does not represent comprehensive vulnerability detection or full OWASP coverage.
-
-TaskFlow AI is not the Sentinel AI product. It must remain localhost-only and must never be deployed to a public or production environment.
-
-Both demos are local scanner-validation targets only. Sentinel never executes their code, and dangerous routes must not be invoked.
-
-Its independent local lifecycle is:
-
-```bash
-cd demo/vulnerable-taskflow
-cp .env.example .env
-npm install
-npm run prisma:generate
-npm run db:migrate
-npm run db:seed
-npm run dev
-```
-
-See its [dedicated README](demo/vulnerable-taskflow/README.md) for credentials, API examples, Docker setup, and the exact vulnerability boundary.
+---
 
 ## License
 
-License selection is not finalized. Add the repository license and update this section before public distribution.
-
-## Contributing
-
-Contributions are welcome through focused issues and pull requests. Keep changes within Sentinel’s security boundaries, add appropriate tests, run the documented quality checks, and avoid expanding scanner claims beyond implemented behavior. Review [AGENTS.md](AGENTS.md) and [scanner architecture](docs/scanner-architecture.md) before contributing.
+No license has been finalized for this repository. Add an approved license file before distributing or accepting external contributions under a license grant.
